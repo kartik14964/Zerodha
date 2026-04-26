@@ -47,7 +47,7 @@ const Login = () => {
         showConfirmButton: false,
       }).then(() => {
         // Use navigate to avoid a full page reload on your Mac
-        window.location.href = "https://zerodha-dashboard-vo3o.onrender.com";
+        window.location.href = "https://zerodha-dashboard-4kom.onrender.com/";
       });
     } catch (err) {
       setLoading(false);
