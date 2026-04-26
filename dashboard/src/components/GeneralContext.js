@@ -17,7 +17,7 @@ export const GeneralContextProvider = (props) => {
 
   // Fetch holdings 
   useEffect(() => {
-    axios.get("https://zerodha-dashboard-vo3o.onrender.com/allHoldings").then((res) => {
+    axios.get("https://zerodha-mdj3.onrender.com/allHoldings").then((res) => {
       setAllHoldings(res.data);
     });
   }, [isSellWindowOpen]); // Refresh when window opens

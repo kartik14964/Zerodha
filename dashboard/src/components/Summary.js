@@ -7,7 +7,7 @@ const Summary = () => {
 
   useEffect(() => {
     axios
-      .get("https://zerodha-dashboard-vo3o.onrender.com/allHoldings", { withCredentials: true })
+      .get("https://zerodha-mdj3.onrender.com/allHoldings", { withCredentials: true })
       .then((res) => setHoldings(res.data))
       .catch((err) => console.log(err));
   }, []);

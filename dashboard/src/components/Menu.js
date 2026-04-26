@@ -13,7 +13,7 @@ const Menu = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const { data } = await axios.get("https://zerodha-dashboard-vo3o.onrender.com/me", {
+        const { data } = await axios.get("https://zerodha-mdj3.onrender.com/me", {
           withCredentials: true,
         });
 
@@ -40,7 +40,7 @@ const Menu = () => {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "https://zerodha-dashboard-vo3o.onrender.com/logout",
+        "https://zerodha-mdj3.onrender.com/logout",
         {},
         { withCredentials: true },
       );

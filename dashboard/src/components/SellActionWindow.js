@@ -29,7 +29,7 @@ const SellActionWindow = ({ stock, holdings }) => {
 
     try {
       const response = await axios.post(
-        "https://zerodha-dashboard-vo3o.onrender.com/newOrder",
+        "https://zerodha-mdj3.onrender.com/newOrder",
         {
           name: stock.name,
           qty: stockQuantity,

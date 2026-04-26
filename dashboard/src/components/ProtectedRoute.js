@@ -7,7 +7,7 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const verifyUser = async () => {
       try {
-        const { data } = await axios.get("https://zerodha-dashboard-vo3o.onrender.com/me", {
+        const { data } = await axios.get("https://zerodha-mdj3.onrender.com/me", {
           withCredentials: true,
         });
 

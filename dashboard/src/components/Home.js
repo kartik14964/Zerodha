@@ -8,7 +8,7 @@ const Home = () => {
   useEffect(() => {
     const verifySession = async () => {
       try {
-        const res = await axios.get("https://zerodha-dashboard-vo3o.onrender.com/me", {
+        const res = await axios.get("https://zerodha-mdj3.onrender.com/me", {
           withCredentials: true,
         });
         if (!res.data.loggedIn) {
