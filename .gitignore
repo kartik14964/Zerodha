@@ -1,0 +1,14 @@
+# Ignore the heavy library folders
+node_modules/
+**/node_modules/
+
+# Ignore local environment variables
+.env
+**/.env
+
+# Ignore OS-specific files
+.DS_Store
+
+# Ignore build folders
+build/
+dist/

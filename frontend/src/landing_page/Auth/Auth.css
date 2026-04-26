@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+.kite-landing-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #fff;
+  font-family: 'Inter', sans-serif;
+  padding: 0 10%;
+}
+
+.kite-landing-content {
+  display: flex;
+  width: 100%;
+  max-width: 1100px;
+  align-items: center;
+  gap: 80px;
+}
+
+/* Left side illustration area */
+.kite-illustration {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.kite-illustration img {
+  width: 100%;
+  max-width: 550px;
+}
+
+/* Right side form area */
+.kite-signup-section {
+  flex: 0 0 350px;
+}
+
+.kite-signup-section h1 {
+  font-size: 32px;
+  font-weight: 500;
+  color: #424242;
+  margin-bottom: 10px;
+}
+
+.kite-signup-section p {
+  color: #9b9b9b;
+  font-size: 16px;
+  margin-bottom: 30px;
+}
+
+.kite-input-field {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  margin-bottom: 20px;
+  color: #424242;
+}
+
+.kite-blue-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4184f3; /* The Zerodha Blue from your image */
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.kite-blue-btn:hover {
+  background-color: #357ae8;
+}
+
+.kite-legal-text {
+  margin-top: 25px;
+  font-size: 12px;
+  color: #9b9b9b;
+  line-height: 1.6;
+}
+
+.kite-legal-text a {
+  color: #4184f3;
+  text-decoration: none;
+}

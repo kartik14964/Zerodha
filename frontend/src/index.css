@@ -1,0 +1,53 @@
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+.nav-link {
+  margin-left: 40px;
+}
+
+footer a {
+  text-decoration: none;
+  color: #666;
+}
+
+footer a:hover {
+  color: #387ed1; /* Zerodha blue */
+}
+#supportHero {
+  background-color: rgb(56, 126, 209);
+  color: white;
+}
+
+/* center content */
+#supportWrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+#supportHero .row {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* links */
+#supportHero a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: underline;
+  font-size: 14px;
+}
+
+/* input */
+#supportHero input {
+  font-size: 16px;
+}
