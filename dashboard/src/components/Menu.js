@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
@@ -6,10 +6,8 @@ const Menu = () => {
   const [selectedMenu, setSelectedMenu] = useState(0);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
-  // Create a state to hold the user's name
   const [username, setUsername] = useState("User");
 
-  // Fetch the user's info when the menu loads
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -40,13 +38,19 @@ const Menu = () => {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "https://zerodha-mdj3.onrender.com/logout",
+        "http://localhost:3002/logout",
         {},
         { withCredentials: true },
       );
-      window.location.replace("https://zerodha-frontend-cgha.onrender.com");
+
+      window.close();
+
+      setTimeout(() => {
+        window.location.replace("https://zerodha-frontend-cgha.onrender.com/login");
+      }, 100);
     } catch (err) {
-      alert("Logout failed. Please try again.");
+      console.error("Logout failed", err);
+      window.location.replace("https://zerodha-frontend-cgha.onrender.com/login");
     }
   };
 
@@ -162,7 +166,7 @@ const Menu = () => {
                   width: "100%",
                   textAlign: "left",
                   padding: "8px 16px",
-                  cursor:"pointer"
+                  cursor: "pointer",
                 }}
               >
                 Logout
