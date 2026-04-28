@@ -38,19 +38,13 @@ const Menu = () => {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "http://localhost:3002/logout",
+        "https://zerodha-mdj3.onrender.com/logout",
         {},
         { withCredentials: true },
       );
-
-      window.close();
-
-      setTimeout(() => {
-        window.location.replace("https://zerodha-frontend-cgha.onrender.com/login");
-      }, 100);
+      window.location.replace("https://zerodha-frontend-cgha.onrender.com");
     } catch (err) {
-      console.error("Logout failed", err);
-      window.location.replace("https://zerodha-frontend-cgha.onrender.com/login");
+      alert("Logout failed. Please try again.");
     }
   };
 
