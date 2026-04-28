@@ -37,7 +37,7 @@ app.use(
   cors({
     origin: [
       "https://zerodha-dashboard-4kom.onrender.com",
-      "https://zerodha-frontend-h6i8.onrender.com",
+      "https://zerodha-frontend-cgha.onrender.com",
     ],
     credentials: true,
   }),
