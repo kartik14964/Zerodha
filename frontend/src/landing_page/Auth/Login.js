@@ -1,17 +1,15 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom"; // Use useNavigate for React routing
+import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import "./Auth.css";
 
-// Move Regex outside the component for better performance
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
 
-  // Single handler for all inputs (Clean & Scalable)
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -20,7 +18,6 @@ const Login = () => {
     e.preventDefault();
     const { email, password } = formData;
 
-    // Fast Validation using Swal
     if (!EMAIL_REGEX.test(email)) {
       return Swal.fire(
         "Invalid Email",
@@ -32,29 +29,32 @@ const Login = () => {
       return Swal.fire("Missing Password", "Password is required.", "warning");
     }
 
+    const newTab = window.open("about:blank", "_blank");
+
     setLoading(true);
-  try {
-      
+    try {
       await axios.post("https://zerodha-mdj3.onrender.com/login", formData, {
         withCredentials: true,
       });
 
-      
+      if (newTab) {
+        newTab.location.href = "http://localhost:3000";
+      }
+
       Swal.fire({
         title: "Welcome Back!",
-        text: "Login successful. Opening dashboard...", // Updated text
+        text: "Login successful. Opening dashboard...",
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        
-
-        window.open("https://zerodha-dashboard-4kom.onrender.com", "_blank"); 
-        window.location.replace("https://zerodha-frontend-cgha.onrender.com/"); 
-        
+        window.location.replace("https://zerodha-frontend-cgha.onrender.com/");
       });
     } catch (err) {
       setLoading(false);
+
+      if (newTab) newTab.close();
+
       Swal.fire({
         title: "Login Failed",
         text:
@@ -80,7 +80,7 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             <input
               type="email"
-              name="email" // Must match key in formData
+              name="email"
               placeholder="Email address"
               className="kite-input-field"
               value={formData.email}
@@ -89,7 +89,7 @@ const Login = () => {
             />
             <input
               type="password"
-              name="password" // Must match key in formData
+              name="password"
               placeholder="Password"
               className="kite-input-field"
               value={formData.password}
