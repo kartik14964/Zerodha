@@ -8,17 +8,17 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data } = await axios.get("http://localhost:3002/me", {
+        const { data } = await axios.get("https://zerodha-mdj3.onrender.com/me", {
           withCredentials: true,
         });
 
         if (data.loggedIn) {
           setIsAuthenticated(true); // Cookie valid, allow access
         } else {
-          window.location.href = "http://localhost:3001/";
+          window.location.href = "https://zerodha-frontend-h6i8.onrender.com/";
         }
       } catch (err) {
-        window.location.href = "http://localhost:3001/";
+        window.location.href = "https://zerodha-frontend-h6i8.onrender.com/";
       } finally {
         // Stop the loading spinner whether it succeeded or failed
         setIsChecking(false);
