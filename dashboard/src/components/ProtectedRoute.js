@@ -6,12 +6,11 @@ const ProtectedRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   
-  const loginUrl = "https://zerodha-frontend-cgha.onrender.com/";
-  
+  const loginFrontendUrl = "https://zerodha-frontend-cgha.onrender.com/login"; 
+
   const checkAuth = useCallback(async () => {
     setIsChecking(true); 
     try {
-      
       const { data } = await axios.get("https://zerodha-mdj3.onrender.com/me", {
         withCredentials: true, 
       });
@@ -20,17 +19,16 @@ const ProtectedRoute = ({ children }) => {
         setIsAuthenticated(true);
         setIsChecking(false);
       } else {
-        window.location.replace(loginUrl); 
+        window.location.replace(loginFrontendUrl); 
       }
     } catch (err) {
-      window.location.replace(loginUrl);
+      window.location.replace(loginFrontendUrl);
     }
-  }, [loginUrl]);
+  }, []);
 
   useEffect(() => {
     checkAuth();
 
-    
     const handlePageShow = (event) => {
       if (event.persisted) {
         checkAuth(); 
