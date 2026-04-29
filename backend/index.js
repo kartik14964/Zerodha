@@ -4,21 +4,20 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
 const PORT = process.env.PORT || 3002;
 const uri = process.env.MONGO_URL;
+const JWT_SECRET = process.env.JWT_SECRET || "zerodha_super_secret";
 
 const app = express();
-
 app.set("trust proxy", 1);
 
 const { HoldingsModel } = require("./model/HoldingsModel");
 const { PositionsModel } = require("./model/PositionsModel");
 const { OrdersModel } = require("./model/OrdersModel");
 const { UserModel } = require("./model/UserModel");
-const session = require("express-session");
-const passport = require("passport");
-const MongoStore = require("connect-mongo");
-const bcrypt = require("bcryptjs");
 
 //  Middleware
 
@@ -35,44 +34,28 @@ app.use(securityMiddleware);
 
 app.use(
   cors({
-    origin: [
-      "https://zerodha-dashboard-4kom.onrender.com",
-      "https://zerodha-frontend-cgha.onrender.com",
-    ],
+    origin: ["http://localhost:3001", "http://localhost:3000"],
     credentials: true,
   }),
 );
 app.use(bodyParser.json());
 
-// Session
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "zerodha_secret",
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({ mongoUrl: uri }),
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24,
-      secure: true, // Required for cross-site cookies
-      httpOnly: true, // Prevents JS from reading the cookie
-      sameSite: "none",
-    },
-  }),
-);
+//   JWT Auth Gatekeeper
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized. Please login." });
+  }
 
-// Passport
-require("./config/passport")(passport);
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Auth Middleware protect routes
-function isAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) return next();
-  return res.status(401).json({ message: "Unauthorized. Please login." });
-}
-
-//  Auth Routes
-
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded; // Attaches { _id, email } to req
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid or expired token." });
+  }
+};
 // SIGNUP
 app.post("/signup", async (req, res) => {
   const { email, password } = req.body;
@@ -91,52 +74,74 @@ app.post("/signup", async (req, res) => {
 });
 
 // LOGIN
-app.post("/login", (req, res, next) => {
-  passport.authenticate("local", (err, user, info) => {
-    if (err) return next(err);
-    if (!user) return res.status(401).json({ message: info.message });
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await UserModel.findOne({ email });
 
-    req.logIn(user, (err) => {
-      if (err) return next(err);
-      return res
-        .status(200)
-        .json({ message: "Login successful", user: { email: user.email } });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Verify Password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Create Token
+    const token = jwt.sign({ _id: user._id, email: user.email }, JWT_SECRET, {
+      expiresIn: "24h",
     });
-  })(req, res, next);
+
+    res.status(200).json({
+      message: "Login successful",
+      token: token,
+      user: { email: user.email },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error during login" });
+  }
 });
 
 // logout
 app.post("/logout", (req, res) => {
-  req.logout(() => {
-    res.status(200).json({ message: "Logged out successfully" });
-  });
+  res.status(200).json({ message: "Logged out successfully" });
 });
+app.get("/me", authenticateToken, async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.user._id);
 
-// check session
-app.get("/me", (req, res) => {
-  if (req.isAuthenticated()) {
-    return res.json({
+    if (!user) {
+      return res
+        .status(404)
+        .json({ loggedIn: false, message: "User not found" });
+    }
+
+    res.json({
       loggedIn: true,
       user: {
-        email: req.user.email,
-        balance: req.user.balance,
-        id: req.user._id,
+        email: user.email,
+        balance: user.balance,
+        id: user._id,
       },
     });
+  } catch (err) {
+    console.error("Error in /me route:", err);
+    res.status(500).json({ loggedIn: false });
   }
-  res.json({ loggedIn: false });
 });
-
-app.get("/allHoldings", isAuthenticated, async (req, res) => {
+app.get("/allHoldings", authenticateToken, async (req, res) => {
   let userHoldings = await HoldingsModel.find({ user: req.user._id });
   res.json(userHoldings);
 });
 
-app.get("/allPositions", isAuthenticated, async (req, res) => {
+app.get("/allPositions", authenticateToken, async (req, res) => {
   let userPositions = await PositionsModel.find({ user: req.user._id });
   res.json(userPositions);
 });
-app.post("/newOrder", isAuthenticated, async (req, res) => {
+app.post("/newOrder", authenticateToken, async (req, res) => {
   const { name, qty, price, mode } = req.body;
   const orderQty = Number(qty);
   const orderPrice = Number(price);
@@ -271,7 +276,7 @@ app.post("/newOrder", isAuthenticated, async (req, res) => {
   }
 });
 //  get all orders
-app.get("/allOrders", isAuthenticated, async (req, res) => {
+app.get("/allOrders", authenticateToken, async (req, res) => {
   try {
     // Find all orders of current logged in user
     const userOrders = await OrdersModel.find({ user: req.user._id });

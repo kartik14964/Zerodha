@@ -11,9 +11,7 @@ const Menu = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const { data } = await axios.get("https://zerodha-mdj3.onrender.com/me", {
-          withCredentials: true,
-        });
+        const { data } = await axios.get("http://localhost:3002/me");
 
         if (data.loggedIn && data.user) {
           const nameFromEmail = data.user.email.split("@")[0];
@@ -37,13 +35,14 @@ const Menu = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post(
-        "https://zerodha-mdj3.onrender.com/logout",
-        {},
-        { withCredentials: true },
-      );
-      window.location.replace("https://zerodha-frontend-cgha.onrender.com");
+      await axios.post("http://localhost:3002/logout");
+
+      localStorage.removeItem("token");
+
+      window.location.replace("http://localhost:3001");
     } catch (err) {
+      // Even if the server throws an error, force wipe the token locally
+      localStorage.removeItem("token");
       alert("Logout failed. Please try again.");
     }
   };

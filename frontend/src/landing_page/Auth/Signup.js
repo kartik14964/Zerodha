@@ -28,9 +28,8 @@ const Signup = () => {
     try {
       const { email, password } = formData;
       const { data } = await axios.post(
-        "https://zerodha-mdj3.onrender.com/signup", //backend
+        "http://localhost:3002/signup", //backend
         { email, password },
-        { withCredentials: true },
       );
       Swal.fire({
         title: "Account Created!",
@@ -39,7 +38,7 @@ const Signup = () => {
         confirmButtonColor: "#387ed1",
         confirmButtonText: "Go to Login",
       }).then((result) => {
-        window.location.href = "/login";
+        window.location.replace("/login");
       });
     } catch (err) {
       setLoading(false);

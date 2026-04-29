@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import "./Auth.css";
 
@@ -10,7 +10,6 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
 
-  
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -33,11 +32,17 @@ const Login = () => {
 
     setLoading(true);
     try {
-      await axios.post("https://zerodha-mdj3.onrender.com/login", formData, {//backend
-        withCredentials: true,
-      });
+      const response = await axios.post(
+        "http://localhost:3002/login",
+        formData,
+      );
 
-      // Success Notification
+      // Inside your handleSubmit success block:
+      localStorage.setItem("token", response.data.token);
+
+      // Create a temporary cookie that lives for exactly 5 seconds
+      document.cookie = `tempToken=${response.data.token}; path=/; max-age=5; SameSite=Lax`;
+
       Swal.fire({
         title: "Welcome Back!",
         text: "Login successful. Redirecting to dashboard...",
@@ -45,8 +50,8 @@ const Login = () => {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        // Use navigate to avoid a full page reload on your Mac
-        window.location.replace("https://zerodha-dashboard-4kom.onrender.com/");
+        // Redirect normally, NO token in the URL!
+        window.location.replace("http://localhost:3000/");
       });
     } catch (err) {
       setLoading(false);
@@ -75,7 +80,7 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             <input
               type="email"
-              name="email" 
+              name="email"
               placeholder="Email address"
               className="kite-input-field"
               value={formData.email}
@@ -84,7 +89,7 @@ const Login = () => {
             />
             <input
               type="password"
-              name="password" 
+              name="password"
               placeholder="Password"
               className="kite-input-field"
               value={formData.password}

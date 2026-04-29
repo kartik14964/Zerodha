@@ -6,14 +6,26 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./components/Home";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-axios.defaults.baseURL = "https://zerodha-mdj3.onrender.com";
-axios.defaults.withCredentials = true;
+axios.defaults.baseURL = "http://localhost:3002";
 
+// STAPLE THE TOKEN TO EVERY REQUEST
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// DESTROY TOKEN ON 401
 axios.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      window.location.replace("https://zerodha-frontend-cgha.onrender.com/login");
+      localStorage.removeItem("token"); // Wipe the bad token
+      if (window.location.pathname !== "/login") {
+        window.location.replace("http://localhost:3001");
+      }
     }
     return Promise.reject(err);
   },
@@ -27,7 +39,7 @@ root.render(
         path="/*"
         element={
           <ProtectedRoute>
-            <Home /> {/* Home contains your Orders, Holdings, Funds, etc. */}
+            <Home /> 
           </ProtectedRoute>
         }
       />
