@@ -74,21 +74,32 @@ app.post("/signup", async (req, res) => {
 });
 
 // LOGIN
+// LOGIN
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log(`\n--- NEW LOGIN ATTEMPT ---`);
+    console.log(`Email provided: '${email}'`);
+    console.log(`Password provided: '${password}'`);
+
     const user = await UserModel.findOne({ email });
 
     if (!user) {
+      console.log("DEBUG: Email not found in the database.");
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    console.log("DEBUG: User found in DB! Checking password...");
+    
     // Verify Password
     const isMatch = await bcrypt.compare(password, user.password);
+    
     if (!isMatch) {
+      console.log("DEBUG: Password did NOT match the hash in the DB.");
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    console.log("DEBUG: Login fully successful. Generating token.");
     // Create Token
     const token = jwt.sign({ _id: user._id, email: user.email }, JWT_SECRET, {
       expiresIn: "24h",
@@ -100,7 +111,7 @@ app.post("/login", async (req, res) => {
       user: { email: user.email },
     });
   } catch (err) {
-    console.error(err);
+    console.error("DEBUG SERVER ERROR:", err);
     res.status(500).json({ message: "Server error during login" });
   }
 });
