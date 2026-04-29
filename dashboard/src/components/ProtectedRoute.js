@@ -20,29 +20,28 @@ const ProtectedRoute = ({ children }) => {
   if (tempCookieToken) {
     localStorage.setItem("token", tempCookieToken);
     document.cookie = "tempToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    token = tempCookieToken; // Update local variable so this render cycle knows about it
+    token = tempCookieToken; 
   }
 
-  // 3. SIDE EFFECTS (Redirects and API calls go inside useEffect)
+  // 3. SIDE EFFECTS 
   useEffect(() => {
-    // If there is no token at all, redirect immediately
     if (!token) {
-      window.location.replace("http://localhost:3001/login");
+      window.location.replace("https://zerodhafrontend-g8o8.onrender.com/login");
       return;
     }
 
     const verifyUser = async () => {
       try {
-        const { data } = await axios.get("http://localhost:3002/me");
+        const { data } = await axios.get("https://zerodhabackend-3sw3.onrender.com/me");
         if (data.loggedIn) {
           setIsAuthenticated(true);
         } else {
           localStorage.removeItem("token");
-          window.location.replace("http://localhost:3001/login");
+          window.location.replace("https://zerodhafrontend-g8o8.onrender.com/login");
         }
       } catch (err) {
         localStorage.removeItem("token");
-        window.location.replace("http://localhost:3001/login");
+        window.location.replace("https://zerodhafrontend-g8o8.onrender.com/login");
       }
     };
 
@@ -64,7 +63,7 @@ const ProtectedRoute = ({ children }) => {
     };
   }, [token]);
 
-  // 4. NOW WE CAN SAFELY RETURN EARLY (After all hooks are declared)
+  // 4. NOW WE CAN SAFELY RETURN EARLY 
   if (!token) {
     return null; // Prevents the dashboard UI from flashing on the screen
   }

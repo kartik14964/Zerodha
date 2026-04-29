@@ -6,7 +6,7 @@ const Positions = () => {
   const [allPositions, setAllPositions] = useState([]);
   useEffect(() => {
     axios
-      .get("https://zerodha-mdj3.onrender.com/allPositions", { withCredentials: true })
+      .get("https://zerodhabackend-3sw3.onrender.com/allPositions", { withCredentials: true })
       .then((res) => {
         setAllPositions(res.data);
       })

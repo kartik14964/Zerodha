@@ -11,13 +11,13 @@ const Funds = () => {
     // Fetch the actual user balance from the session
     const fetchFunds = async () => {
       try {
-        const userRes = await axios.get("https://zerodha-mdj3.onrender.com/me", { withCredentials: true });
+        const userRes = await axios.get("https://zerodhabackend-3sw3.onrender.com/me", { withCredentials: true });
         if (userRes.data.loggedIn) {
           setBalance(userRes.data.user.balance);
         }
 
         //  Fetch holdings to calculate "Used Margin"
-        const holdingsRes = await axios.get("https://zerodha-mdj3.onrender.com/allHoldings", { withCredentials: true });
+        const holdingsRes = await axios.get("https://zerodhabackend-3sw3.onrender.com/allHoldings", { withCredentials: true });
         
         // Sum up total investment value
         let totalInvestment = 0;

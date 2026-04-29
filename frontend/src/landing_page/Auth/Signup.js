@@ -6,12 +6,11 @@ import Swal from "sweetalert2";
 
 const Signup = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,10 +26,7 @@ const Signup = () => {
     setLoading(true);
     try {
       const { email, password } = formData;
-      const { data } = await axios.post(
-        "http://localhost:3002/signup", //backend
-        { email, password },
-      );
+      const { data } = await axios.post("https://zerodhabackend-3sw3.onrender.com/signup", { email, password });
       Swal.fire({
         title: "Account Created!",
         text: data.message || "You can now log in to start trading.",
@@ -43,8 +39,6 @@ const Signup = () => {
     } catch (err) {
       setLoading(false);
       const serverMsg = err.response?.data?.message || "Signup failed.";
-
-      // Error pop up
       Swal.fire({
         title: "Error",
         text: serverMsg,
@@ -57,16 +51,12 @@ const Signup = () => {
   return (
     <div className="kite-landing-container">
       <div className="kite-landing-content">
-        {/* Left Side: Illustration  */}
         <div className="kite-illustration">
           <img src="media/images/account_open.svg" alt="Zerodha Ecosystem" />
         </div>
-
-        {/* // Right Side */}
         <div className="kite-signup-section">
           <h1>Signup now</h1>
           <p>Or track your existing application</p>
-
           <form onSubmit={handleSubmit}>
             <input
               type="email"
@@ -86,16 +76,13 @@ const Signup = () => {
               onChange={handleChange}
               required
             />
-
             <button type="submit" className="kite-blue-btn" disabled={loading}>
               {loading ? "Creating Account..." : "Continue"}
             </button>
           </form>
-
           <div className="kite-legal-text">
             By proceeding, you agree to the Zerodha and privacy policy.
-            <br />
-            <br />
+            <br /><br />
             Already have an account? <Link to="/login">Login here</Link>
           </div>
         </div>

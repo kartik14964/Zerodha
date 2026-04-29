@@ -11,7 +11,7 @@ const Menu = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const { data } = await axios.get("http://localhost:3002/me");
+        const { data } = await axios.get("https://zerodhabackend-3sw3.onrender.com/me");
 
         if (data.loggedIn && data.user) {
           const nameFromEmail = data.user.email.split("@")[0];
@@ -35,13 +35,10 @@ const Menu = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post("http://localhost:3002/logout");
-
+      await axios.post("https://zerodhabackend-3sw3.onrender.com/logout");
       localStorage.removeItem("token");
-
-      window.location.replace("http://localhost:3001");
+      window.location.replace("https://zerodhafrontend-g8o8.onrender.com");
     } catch (err) {
-      // Even if the server throws an error, force wipe the token locally
       localStorage.removeItem("token");
       alert("Logout failed. Please try again.");
     }
@@ -56,83 +53,40 @@ const Menu = () => {
       <div className="menus">
         <ul>
           <li>
-            <Link
-              style={{ textDecoration: "none" }}
-              to="/"
-              onClick={() => handleMenuClick(0)}
-            >
-              <p className={selectedMenu === 0 ? activeMenuClass : menuClass}>
-                Dashboard
-              </p>
+            <Link style={{ textDecoration: "none" }} to="/" onClick={() => handleMenuClick(0)}>
+              <p className={selectedMenu === 0 ? activeMenuClass : menuClass}>Dashboard</p>
             </Link>
           </li>
           <li>
-            <Link
-              style={{ textDecoration: "none" }}
-              to="/orders"
-              onClick={() => handleMenuClick(1)}
-            >
-              <p className={selectedMenu === 1 ? activeMenuClass : menuClass}>
-                Orders
-              </p>
+            <Link style={{ textDecoration: "none" }} to="/orders" onClick={() => handleMenuClick(1)}>
+              <p className={selectedMenu === 1 ? activeMenuClass : menuClass}>Orders</p>
             </Link>
           </li>
           <li>
-            <Link
-              style={{ textDecoration: "none" }}
-              to="/holdings"
-              onClick={() => handleMenuClick(2)}
-            >
-              <p className={selectedMenu === 2 ? activeMenuClass : menuClass}>
-                Holdings
-              </p>
+            <Link style={{ textDecoration: "none" }} to="/holdings" onClick={() => handleMenuClick(2)}>
+              <p className={selectedMenu === 2 ? activeMenuClass : menuClass}>Holdings</p>
             </Link>
           </li>
           <li>
-            <Link
-              style={{ textDecoration: "none" }}
-              to="/positions"
-              onClick={() => handleMenuClick(3)}
-            >
-              <p className={selectedMenu === 3 ? activeMenuClass : menuClass}>
-                Positions
-              </p>
+            <Link style={{ textDecoration: "none" }} to="/positions" onClick={() => handleMenuClick(3)}>
+              <p className={selectedMenu === 3 ? activeMenuClass : menuClass}>Positions</p>
             </Link>
           </li>
           <li>
-            <Link
-              style={{ textDecoration: "none" }}
-              to="/funds"
-              onClick={() => handleMenuClick(4)}
-            >
-              <p className={selectedMenu === 4 ? activeMenuClass : menuClass}>
-                Funds
-              </p>
+            <Link style={{ textDecoration: "none" }} to="/funds" onClick={() => handleMenuClick(4)}>
+              <p className={selectedMenu === 4 ? activeMenuClass : menuClass}>Funds</p>
             </Link>
           </li>
           <li>
-            <Link
-              style={{ textDecoration: "none" }}
-              to="/apps"
-              onClick={() => handleMenuClick(5)}
-            >
-              <p className={selectedMenu === 5 ? activeMenuClass : menuClass}>
-                Apps
-              </p>
+            <Link style={{ textDecoration: "none" }} to="/apps" onClick={() => handleMenuClick(5)}>
+              <p className={selectedMenu === 5 ? activeMenuClass : menuClass}>Apps</p>
             </Link>
           </li>
         </ul>
         <hr />
 
-        <div
-          className="profile"
-          onClick={handleProfileClick}
-          style={{ cursor: "pointer", position: "relative" }}
-        >
-          {/*  first two letters of the name and capitalizes them */}
+        <div className="profile" onClick={handleProfileClick} style={{ cursor: "pointer", position: "relative" }}>
           <div className="avatar">{username.substring(0, 2).toUpperCase()}</div>
-
-          {/* Dynamic Username */}
           <p className="username">{username}</p>
 
           {isProfileDropdownOpen && (

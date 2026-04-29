@@ -18,13 +18,8 @@ const Login = () => {
     e.preventDefault();
     const { email, password } = formData;
 
-    // Fast Validation using Swal
     if (!EMAIL_REGEX.test(email)) {
-      return Swal.fire(
-        "Invalid Email",
-        "Please enter a valid email address.",
-        "warning",
-      );
+      return Swal.fire("Invalid Email", "Please enter a valid email address.", "warning");
     }
     if (password.length < 1) {
       return Swal.fire("Missing Password", "Password is required.", "warning");
@@ -32,15 +27,12 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(
-        "http://localhost:3002/login",
-        formData,
-      );
+      const response = await axios.post("https://zerodhabackend-3sw3.onrender.com/login", formData);
 
-      // Inside your handleSubmit success block:
+      
       localStorage.setItem("token", response.data.token);
 
-      // Create a temporary cookie that lives for exactly 5 seconds
+      
       document.cookie = `tempToken=${response.data.token}; path=/; max-age=5; SameSite=Lax`;
 
       Swal.fire({
@@ -50,16 +42,13 @@ const Login = () => {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        // Redirect normally, NO token in the URL!
-        window.location.replace("http://localhost:3000/");
+        window.location.replace("https://zerodha-dashboard-q1i2.onrender.com/");
       });
     } catch (err) {
       setLoading(false);
       Swal.fire({
         title: "Login Failed",
-        text:
-          err.response?.data?.message ||
-          "Invalid credentials. Please try again.",
+        text: err.response?.data?.message || "Invalid credentials. Please try again.",
         icon: "error",
         confirmButtonColor: "#df514c",
       });
@@ -72,11 +61,9 @@ const Login = () => {
         <div className="kite-illustration">
           <img src="media/images/account_open.svg" alt="Login Illustration" />
         </div>
-
         <div className="kite-signup-section">
           <h1>Login to Kite</h1>
           <p>Enter your credentials to continue trading</p>
-
           <form onSubmit={handleSubmit}>
             <input
               type="email"
@@ -96,12 +83,10 @@ const Login = () => {
               onChange={handleChange}
               required
             />
-
             <button type="submit" className="kite-blue-btn" disabled={loading}>
               {loading ? "Authenticating..." : "Login"}
             </button>
           </form>
-
           <div className="kite-legal-text">
             Don't have an account? <Link to="/signup">Signup now</Link>
           </div>

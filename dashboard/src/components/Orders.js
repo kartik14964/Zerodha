@@ -6,9 +6,8 @@ const Orders = () => {
   const [allOrders, setAllOrders] = useState([]);
 
   useEffect(() => {
-    // fetch the order history from your backend
     axios
-      .get("https://zerodha-mdj3.onrender.com/allOrders", { withCredentials: true })
+      .get("https://zerodhabackend-3sw3.onrender.com/allOrders", { withCredentials: true })
       .then((res) => {
         // reverse put recent orders on top
         setAllOrders(res.data.reverse());

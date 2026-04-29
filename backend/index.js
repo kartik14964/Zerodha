@@ -19,8 +19,7 @@ const { PositionsModel } = require("./model/PositionsModel");
 const { OrdersModel } = require("./model/OrdersModel");
 const { UserModel } = require("./model/UserModel");
 
-//  Middleware
-
+// Middleware
 const securityMiddleware = (req, res, next) => {
   res.set({
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
@@ -34,13 +33,13 @@ app.use(securityMiddleware);
 
 app.use(
   cors({
-    origin: ["http://localhost:3001", "http://localhost:3000"],
+    origin: ["https://zerodha-dashboard-q1i2.onrender.com", "https://zerodhafrontend-g8o8.onrender.com"],
     credentials: true,
   }),
 );
 app.use(bodyParser.json());
 
-//   JWT Auth Gatekeeper
+// JWT Auth Gatekeeper
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -56,6 +55,7 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ message: "Invalid or expired token." });
   }
 };
+
 // SIGNUP
 app.post("/signup", async (req, res) => {
   const { email, password } = req.body;
@@ -105,18 +105,17 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// logout
+// LOGOUT
 app.post("/logout", (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 });
+
 app.get("/me", authenticateToken, async (req, res) => {
   try {
     const user = await UserModel.findById(req.user._id);
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ loggedIn: false, message: "User not found" });
+      return res.status(404).json({ loggedIn: false, message: "User not found" });
     }
 
     res.json({
@@ -132,6 +131,7 @@ app.get("/me", authenticateToken, async (req, res) => {
     res.status(500).json({ loggedIn: false });
   }
 });
+
 app.get("/allHoldings", authenticateToken, async (req, res) => {
   let userHoldings = await HoldingsModel.find({ user: req.user._id });
   res.json(userHoldings);
@@ -141,54 +141,42 @@ app.get("/allPositions", authenticateToken, async (req, res) => {
   let userPositions = await PositionsModel.find({ user: req.user._id });
   res.json(userPositions);
 });
+
 app.post("/newOrder", authenticateToken, async (req, res) => {
   const { name, qty, price, mode } = req.body;
   const orderQty = Number(qty);
   const orderPrice = Number(price);
   const totalTransactionValue = orderQty * orderPrice;
-  // Get user id using passport
   const userId = req.user._id;
 
   try {
     const user = await UserModel.findById(userId);
-    //  BUY LOGIC
+    // BUY LOGIC
     if (mode === "BUY") {
-      //  Verify if the user has enough cash
       if (user.balance < totalTransactionValue) {
         return res.status(400).json({
           message: `Insufficient funds. Cost: ₹${totalTransactionValue}, Balance: ₹${user.balance.toFixed(2)}`,
         });
       }
 
-      // Deduct the money from the user's wallet
       user.balance -= totalTransactionValue;
       await user.save();
-      //  Find if this user already owns the stock
-      const existingHolding = await HoldingsModel.findOne({
-        name,
-        user: userId,
-      });
+      
+      const existingHolding = await HoldingsModel.findOne({ name, user: userId });
 
       if (existingHolding) {
-        // Calculate the new average price
         const totalOldValue = existingHolding.qty * existingHolding.avg;
         const totalNewValue = orderQty * orderPrice;
         const newAvg = Number(
-          (
-            (totalOldValue + totalNewValue) /
-            (existingHolding.qty + orderQty)
-          ).toFixed(2),
+          ((totalOldValue + totalNewValue) / (existingHolding.qty + orderQty)).toFixed(2)
         );
-        // Update the row
         existingHolding.qty += orderQty;
         existingHolding.avg = newAvg;
         existingHolding.price = orderPrice;
-
         await existingHolding.save();
       } else {
-        // First time this user is buying this stock
         await new HoldingsModel({
-          user: userId, // Save the user id
+          user: userId,
           name,
           qty: orderQty,
           avg: orderPrice,
@@ -197,10 +185,10 @@ app.post("/newOrder", authenticateToken, async (req, res) => {
           day: "0%",
         }).save();
       }
-      //   POSITIONS LOGIC
+      
       const existingPos = await PositionsModel.findOne({ name, user: userId });
       if (existingPos) {
-        existingPos.qty += orderQty; // For positions we usually just track day qty
+        existingPos.qty += orderQty; 
         await existingPos.save();
       } else {
         await new PositionsModel({
@@ -214,19 +202,12 @@ app.post("/newOrder", authenticateToken, async (req, res) => {
         }).save();
       }
     }
-
-    //  sell logic
+    // SELL LOGIC
     else if (mode === "SELL") {
-      // Find the user's stock
-      const existingHolding = await HoldingsModel.findOne({
-        name,
-        user: userId,
-      });
+      const existingHolding = await HoldingsModel.findOne({ name, user: userId });
 
       if (!existingHolding) {
-        return res
-          .status(400)
-          .json({ message: "Sell failed: You do not own this stock." });
+        return res.status(400).json({ message: "Sell failed: You do not own this stock." });
       }
 
       if (existingHolding.qty < orderQty) {
@@ -237,18 +218,14 @@ app.post("/newOrder", authenticateToken, async (req, res) => {
       user.balance += totalTransactionValue;
       await user.save();
 
-      // Update the Vault
       if (existingHolding.qty === orderQty) {
-        // They sold everything then delete only this user's row.
-        await HoldingsModel.deleteOne({ name, user: userId }); // user id to delete
+        await HoldingsModel.deleteOne({ name, user: userId }); 
       } else {
-        // after sold Subtract the quantity.
         existingHolding.qty -= orderQty;
         existingHolding.price = orderPrice;
-
         await existingHolding.save();
       }
-      //  updating positions on sell
+      
       const existingPos = await PositionsModel.findOne({ name, user: userId });
       if (existingPos) {
         if (existingPos.qty <= orderQty) {
@@ -260,9 +237,9 @@ app.post("/newOrder", authenticateToken, async (req, res) => {
       }
     }
 
-    //  SAVE
+    // SAVE ORDER
     await new OrdersModel({
-      user: userId, // Save the user id to the order
+      user: userId, 
       name,
       qty: orderQty,
       price: orderPrice,
@@ -275,13 +252,11 @@ app.post("/newOrder", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server Error processing order." });
   }
 });
-//  get all orders
+
+// GET ALL ORDERS
 app.get("/allOrders", authenticateToken, async (req, res) => {
   try {
-    // Find all orders of current logged in user
     const userOrders = await OrdersModel.find({ user: req.user._id });
-
-    // Send the data back to the frontend
     res.json(userOrders);
   } catch (err) {
     console.error("Error fetching orders:", err);
