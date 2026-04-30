@@ -1,29 +1,27 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const getCookie = (name) => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
-  return null;
-};
-
 const ProtectedRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
+  // 1. Check LocalStorage AND the URL for the token
   let token = localStorage.getItem("token");
-  const tempCookieToken = getCookie("tempToken");
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlToken = urlParams.get("token");
   
-  if (tempCookieToken) {
-    localStorage.setItem("token", tempCookieToken);
-    document.cookie = "tempToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    token = tempCookieToken; 
+  // 2. If a token arrived via the URL, grab it and hide it!
+  if (urlToken) {
+    localStorage.setItem("token", urlToken);
+    token = urlToken; 
+    
+    // Instantly scrub the token from the address bar so the user never sees it
+    window.history.replaceState({}, document.title, window.location.pathname);
   }
 
+  // 3. Verification and Back-Button Protection
   useEffect(() => {
     if (!token) {
-      console.error("FAILED CHECK 1: No token found in LocalStorage or Cookies.");
-      // window.location.replace("http://localhost:3001/login");
+      window.location.replace("https://zerodhafrontend-g8o8.onrender.com/login");
       return;
     }
 
@@ -33,26 +31,51 @@ const ProtectedRoute = ({ children }) => {
         if (data.loggedIn) {
           setIsAuthenticated(true);
         } else {
-          console.error("FAILED CHECK 2: Token sent, but backend responded with loggedIn: false.");
           localStorage.removeItem("token");
-          // window.location.replace("http://localhost:3001/login");
+          window.location.replace("https://zerodhafrontend-g8o8.onrender.comlogin");
         }
       } catch (err) {
-        console.error("FAILED CHECK 3: The /me API call completely crashed or was blocked.", err.message);
         localStorage.removeItem("token");
-        // window.location.replace("http://localhost:3001/login");
+        window.location.replace("https://zerodhafrontend-g8o8.onrender.comlogin");
       }
     };
 
     verifyUser();
+
+    // Aggressive Back-Forward Cache Defeater
+    const handlePageShow = (event) => {
+      if (!localStorage.getItem("token")) {
+        document.body.style.display = "none";
+        window.location.replace("https://zerodhafrontend-g8o8.onrender.com/login");
+      } else if (event.persisted) {
+        verifyUser();
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
   }, [token]);
 
+  // 4. Safe Early Returns
   if (!token) {
-    return <h2>Error: No Token! Check your console.</h2>; 
+    return null; // Prevents the dashboard UI from flashing empty
   }
 
   if (isAuthenticated === null) {
-    return <h2>Verifying Session... Please wait.</h2>;
+    return (
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <h3>Verifying Session...</h3>
+      </div>
+    );
   }
 
   return children;
