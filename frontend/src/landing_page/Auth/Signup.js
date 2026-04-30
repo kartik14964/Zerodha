@@ -26,7 +26,7 @@ const Signup = () => {
     setLoading(true);
     try {
       const { email, password } = formData;
-      const { data } = await axios.post("https://zerodhabackend-3sw3.onrender.com/signup", { email, password });
+      const { data } = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/signup`, { email, password });
       Swal.fire({
         title: "Account Created!",
         text: data.message || "You can now log in to start trading.",

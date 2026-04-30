@@ -33,7 +33,8 @@ app.use(securityMiddleware);
 
 app.use(
   cors({
-    origin: ["https://zerodha-dashboard-q1i2.onrender.com", "https://zerodhafrontend-g8o8.onrender.com"],
+    origin: [process.env.FRONTEND_AUTH_URL, 
+      process.env.FRONTEND_DASHBOARD_URL],
     credentials: true,
   }),
 );

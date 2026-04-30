@@ -17,7 +17,7 @@ export const GeneralContextProvider = (props) => {
 
   // Fetch holdings 
   useEffect(() => {
-    axios.get("https://zerodhabackend-3sw3.onrender.com/allHoldings").then((res) => {
+    axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`).then((res) => {
       setAllHoldings(res.data);
     });
   }, [isSellWindowOpen]); // Refresh when window opens

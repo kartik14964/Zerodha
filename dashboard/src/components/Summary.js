@@ -7,7 +7,7 @@ const Summary = () => {
 
   useEffect(() => {
     axios
-      .get("https://zerodhabackend-3sw3.onrender.com/allHoldings", { withCredentials: true })
+      .get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`, { withCredentials: true })
       .then((res) => setHoldings(res.data))
       .catch((err) => console.log(err));
   }, []);

@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./components/Home";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-axios.defaults.baseURL = "https://zerodhabackend-3sw3.onrender.com";
+axios.defaults.baseURL = `${process.env.REACT_APP_BACKEND_URL}`;
 
 // STAPLE THE TOKEN TO EVERY REQUEST
 axios.interceptors.request.use((config) => {
@@ -24,7 +24,7 @@ axios.interceptors.response.use(
     if (err.response?.status === 401) {
       localStorage.removeItem("token");
       if (window.location.pathname !== "/login") {
-        window.location.replace("https://zerodhafrontend-g8o8.onrender.com");
+        window.location.replace(`${process.env.REACT_APP_FRONTEND_URL}`);
       }
     }
     return Promise.reject(err);

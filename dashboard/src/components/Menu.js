@@ -11,7 +11,7 @@ const Menu = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const { data } = await axios.get("https://zerodhabackend-3sw3.onrender.com/me");
+        const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/me`);
 
         if (data.loggedIn && data.user) {
           const nameFromEmail = data.user.email.split("@")[0];
@@ -35,9 +35,9 @@ const Menu = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post("https://zerodhabackend-3sw3.onrender.com/logout");
+      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/logout`);
       localStorage.removeItem("token");
-      window.location.replace("https://zerodhafrontend-g8o8.onrender.com");
+      window.location.replace(`${process.env.REACT_APP_FRONTEND_URL}`);
     } catch (err) {
       localStorage.removeItem("token");
       alert("Logout failed. Please try again.");

@@ -19,15 +19,23 @@ const Login = () => {
     const { email, password } = formData;
 
     if (!EMAIL_REGEX.test(email)) {
-      return Swal.fire("Invalid Email", "Please enter a valid email address.", "warning");
+      return Swal.fire(
+        "Invalid Email",
+        "Please enter a valid email address.",
+        "warning",
+      );
     }
     if (password.length < 1) {
       return Swal.fire("Missing Password", "Password is required.", "warning");
     }
 
     setLoading(true);
-try {
-      const response = await axios.post("http://localhost:3002/login", formData);
+
+    try {
+      const response = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/login`,
+        formData,
+      );
 
       // Save token locally in App 1
       localStorage.setItem("token", response.data.token);
@@ -39,16 +47,16 @@ try {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        // THE FIX: Attach the token to the URL string
-        window.location.replace(`http://localhost:3000/?token=${response.data.token}`);
+        window.location.replace(`${process.env.REACT_APP_DASHBOARD_URL}/`);
       });
-
     } catch (err) {
       // ... catch block remains the same
       setLoading(false);
       Swal.fire({
         title: "Login Failed",
-        text: err.response?.data?.message || "Invalid credentials. Please try again.",
+        text:
+          err.response?.data?.message ||
+          "Invalid credentials. Please try again.",
         icon: "error",
         confirmButtonColor: "#df514c",
       });

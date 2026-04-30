@@ -21,22 +21,24 @@ const ProtectedRoute = ({ children }) => {
   // 3. Verification and Back-Button Protection
   useEffect(() => {
     if (!token) {
-      window.location.replace("https://zerodhafrontend-g8o8.onrender.com/login");
+      window.location.replace(`${process.env.REACT_APP_FRONTEND_URL}/login`);
       return;
     }
 
     const verifyUser = async () => {
       try {
-        const { data } = await axios.get("https://zerodhabackend-3sw3.onrender.com/me");
+        const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/me`);
         if (data.loggedIn) {
           setIsAuthenticated(true);
         } else {
           localStorage.removeItem("token");
-          window.location.replace("https://zerodhafrontend-g8o8.onrender.comlogin");
+
+          window.location.replace(`${process.env.REACT_APP_FRONTEND_URL}/login`);
         }
       } catch (err) {
         localStorage.removeItem("token");
-        window.location.replace("https://zerodhafrontend-g8o8.onrender.comlogin");
+        window.location.replace(`${process.env.REACT_APP_FRONTEND_URL}/login`);
+
       }
     };
 

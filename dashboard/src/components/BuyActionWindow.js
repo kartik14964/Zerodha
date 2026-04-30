@@ -22,7 +22,7 @@ const BuyActionWindow = ({ stock }) => {
     }
 
     try {
-      const response = await axios.post("https://zerodhabackend-3sw3.onrender.com/newOrder", {
+      const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/newOrder`, {
         name: stock.name,
         qty: Number(stockQuantity),
         price: Number(stockPrice),

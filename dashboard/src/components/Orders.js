@@ -7,7 +7,7 @@ const Orders = () => {
 
   useEffect(() => {
     axios
-      .get("https://zerodhabackend-3sw3.onrender.com/allOrders", { withCredentials: true })
+      .get(`${process.env.REACT_APP_BACKEND_URL}/allOrders`, { withCredentials: true })
       .then((res) => {
         // reverse put recent orders on top
         setAllOrders(res.data.reverse());
