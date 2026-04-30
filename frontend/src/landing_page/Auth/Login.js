@@ -26,14 +26,11 @@ const Login = () => {
     }
 
     setLoading(true);
-    try {
-      const response = await axios.post("https://zerodhabackend-3sw3.onrender.com/login", formData);
+try {
+      const response = await axios.post("http://localhost:3002/login", formData);
 
-      
+      // Save token locally in App 1
       localStorage.setItem("token", response.data.token);
-
-      
-      document.cookie = `tempToken=${response.data.token}; path=/; max-age=5; SameSite=Lax`;
 
       Swal.fire({
         title: "Welcome Back!",
@@ -42,9 +39,12 @@ const Login = () => {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        window.location.replace("https://zerodha-dashboard-q1i2.onrender.com/");
+        // THE FIX: Attach the token to the URL string
+        window.location.replace(`http://localhost:3000/?token=${response.data.token}`);
       });
+
     } catch (err) {
+      // ... catch block remains the same
       setLoading(false);
       Swal.fire({
         title: "Login Failed",
