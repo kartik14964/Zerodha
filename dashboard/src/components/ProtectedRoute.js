@@ -29,7 +29,7 @@ const ProtectedRoute = ({ children }) => {
 
     const verifyUser = async () => {
       try {
-        const { data } = await axios.get("http://localhost:3002/me");
+        const { data } = await axios.get("https://zerodhabackend-3sw3.onrender.com/me");
         if (data.loggedIn) {
           setIsAuthenticated(true);
         } else {
