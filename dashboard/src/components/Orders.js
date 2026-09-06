@@ -7,7 +7,7 @@ const Orders = () => {
 
   useEffect(() => {
     axios
-      .get(`${process.env.REACT_APP_BACKEND_URL}/allOrders`, { withCredentials: true })
+      .get(`${process.env.REACT_APP_BACKEND_URL}/allOrders`)
       .then((res) => {
         // reverse put recent orders on top
         setAllOrders(res.data.reverse());

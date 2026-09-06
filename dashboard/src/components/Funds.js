@@ -11,13 +11,13 @@ const Funds = () => {
     // Fetch the actual user balance from the session
     const fetchFunds = async () => {
       try {
-        const userRes = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/me`, { withCredentials: true });
+        const userRes = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/me`);
         if (userRes.data.loggedIn) {
           setBalance(userRes.data.user.balance);
         }
 
         //  Fetch holdings to calculate "Used Margin"
-        const holdingsRes = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`, { withCredentials: true });
+        const holdingsRes = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`);
         
         // Sum up total investment value
         let totalInvestment = 0;

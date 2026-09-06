@@ -35,8 +35,7 @@ const SellActionWindow = ({ stock, holdings }) => {
           qty: stockQuantity,
           price: stockPrice,
           mode: "SELL",
-        },
-        { withCredentials: true },
+        }
       );
 
       Swal.fire({

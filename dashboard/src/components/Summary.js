@@ -8,9 +8,7 @@ const Summary = () => {
 
   useEffect(() => {
     axios
-      .get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`, {
-        withCredentials: true,
-      })
+      .get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`)
       .then((res) => setHoldings(res.data))
       .catch((err) => console.log(err));
 
