@@ -30,6 +30,8 @@ axios.interceptors.response.use(
     return Promise.reject(err);
   },
 );
+// Wake up Render backend
+axios.get("/ping").catch(() => {});
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

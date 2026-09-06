@@ -13,6 +13,8 @@ import NotFound from "./landing_page/NotFound";
 import Signup from "./landing_page/Auth/Signup";
 import Login from "./landing_page/Auth/Login";
 
+// Wake up Render backend
+fetch(`${process.env.REACT_APP_BACKEND_URL}/ping`).catch(() => {});
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

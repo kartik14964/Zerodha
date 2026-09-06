@@ -40,6 +40,11 @@ app.use(
 );
 app.use(bodyParser.json());
 
+// Ping route to wake up Render server
+app.get("/ping", (req, res) => {
+  res.status(200).json({ message: "pong" });
+});
+
 // JWT Auth Gatekeeper
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
