@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSocket } from "../context/SocketContext";
 import axios from "axios";
 import { Skeleton } from "@mui/material";
 
@@ -15,6 +16,7 @@ const Positions = () => {
   const [allPositions, setAllPositions] = useState([]);
   const [livePrices, setLivePrices] = useState({});
   const [loading, setLoading] = useState(true);
+  const socket = useSocket();
 
   useEffect(() => {
     axios
@@ -60,9 +62,36 @@ const Positions = () => {
     };
 
     fetchPrices();
-    const interval = setInterval(fetchPrices, 10000);
-    return () => clearInterval(interval);
-  }, [allPositions]);
+
+    if (socket) {
+      const symbolArray = allPositions.map((p) => getYahooSymbol(p.name));
+      socket.emit("subscribe", symbolArray);
+
+      const handlePriceUpdate = (q) => {
+        setLivePrices((prev) => {
+          const position = allPositions.find(p => getYahooSymbol(p.name) === q.name);
+          if (position) {
+            return {
+              ...prev,
+              [position.name]: {
+                price: q.price,
+                percent: q.percent,
+                isDown: q.isDown
+              }
+            };
+          }
+          return prev;
+        });
+      };
+
+      socket.on("price_update", handlePriceUpdate);
+
+      return () => {
+        socket.off("price_update", handlePriceUpdate);
+        socket.emit("unsubscribe", symbolArray);
+      };
+    }
+  }, [allPositions, socket]);
   return (
     <>
       <h3 className="title">Positions ({allPositions.length})</h3>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import { useSocket } from "../context/SocketContext";
 import axios from "axios";
 import { Tooltip, Grow } from "@mui/material";
 import {
@@ -11,10 +12,10 @@ import {
 import GeneralContext from "./GeneralContext";
 
 
-const formatINR = (value) => {
+const formatCurrency = (value, currencyCode = 'INR') => {
   return Number(value).toLocaleString('en-IN', {
     style: 'currency',
-    currency: 'INR',
+    currency: currencyCode,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
@@ -24,6 +25,7 @@ const WatchList = () => {
   const [liveWatchlist, setLiveWatchlist] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const socket = useSocket();
 
   const handleSearch = async (e) => {
     const val = e.target.value;
@@ -66,6 +68,8 @@ const WatchList = () => {
             name: cleanName,
             symbol: stockData.name,
             price: 0,
+            nativePrice: 0,
+            currency: 'INR',
             percent: "0.00%",
             isDown: false,
           },
@@ -87,6 +91,8 @@ const WatchList = () => {
           name: item.name,
           symbol: item.symbol,
           price: 0,
+          nativePrice: 0,
+          currency: 'INR',
           percent: "0.00%",
           isDown: false,
         }));
@@ -104,16 +110,18 @@ const WatchList = () => {
       .catch(err => console.error(err));
   }, []);
 
-  const watchListNames = liveWatchlist.map((s) => s.name).join(",");
+  const watchListSymbols = liveWatchlist.map((s) => s.symbol || s.name + ".NS").join(",");
 
   useEffect(() => {
     if (liveWatchlist.length === 0) return;
-    const symbols = liveWatchlist.map((s) => s.symbol || s.name + ".NS").join(",");
+    const symbolArray = watchListSymbols.split(",");
+    const symbolsJoined = watchListSymbols;
 
+    // 1. Initial Data Fetch
     const fetchQuotes = async () => {
       try {
         const { data: liveDataArray } = await axios.get(
-          `${process.env.REACT_APP_BACKEND_URL}/quotes?symbols=${symbols}`
+          `${process.env.REACT_APP_BACKEND_URL}/quotes?symbols=${symbolsJoined}`
         );
 
         setLiveWatchlist((prevWatchlist) =>
@@ -125,6 +133,8 @@ const WatchList = () => {
               return {
                 ...stock,
                 price: liveStock.price,
+                nativePrice: liveStock.nativePrice || liveStock.price,
+                currency: liveStock.currency || 'INR',
                 percent: liveStock.percent,
                 isDown: liveStock.isDown,
               };
@@ -138,10 +148,38 @@ const WatchList = () => {
     };
 
     fetchQuotes();
-    const interval = setInterval(fetchQuotes, 10000);
-    return () => clearInterval(interval);
+
+    // 2. WebSocket Subscription
+    if (socket) {
+      socket.emit("subscribe", symbolArray);
+
+      const handlePriceUpdate = (data) => {
+        setLiveWatchlist((prevWatchlist) =>
+          prevWatchlist.map((stock) => {
+            if ((stock.symbol || stock.name + ".NS") === data.name) {
+              return {
+                ...stock,
+                price: data.price,
+                nativePrice: data.nativePrice || data.price,
+                currency: data.currency || 'INR',
+                percent: data.percent,
+                isDown: data.isDown,
+              };
+            }
+            return stock;
+          })
+        );
+      };
+
+      socket.on("price_update", handlePriceUpdate);
+
+      return () => {
+        socket.off("price_update", handlePriceUpdate);
+        socket.emit("unsubscribe", symbolArray);
+      };
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchListNames]);
+  }, [watchListSymbols, socket]);
 
 
   return (
@@ -208,18 +246,18 @@ const WatchListItem = ({ stock, removeStockFromWatchlist }) => {
   const prevPriceRef = React.useRef(stock.price);
 
   React.useEffect(() => {
-    if (prevPriceRef.current !== undefined && prevPriceRef.current !== 0 && prevPriceRef.current !== stock.price) {
-      if (stock.price > prevPriceRef.current) {
+    if (prevPriceRef.current !== undefined && prevPriceRef.current !== 0 && prevPriceRef.current !== stock.nativePrice) {
+      if (stock.nativePrice > prevPriceRef.current) {
         setFlashClass("flash-up");
-      } else if (stock.price < prevPriceRef.current) {
+      } else if (stock.nativePrice < prevPriceRef.current) {
         setFlashClass("flash-down");
       }
     }
-    prevPriceRef.current = stock.price;
+    prevPriceRef.current = stock.nativePrice;
 
     const timer = setTimeout(() => setFlashClass(""), 1000);
     return () => clearTimeout(timer);
-  }, [stock.price]);
+  }, [stock.nativePrice]);
 
   return (
     <li className={flashClass}>
@@ -233,7 +271,7 @@ const WatchListItem = ({ stock, removeStockFromWatchlist }) => {
           ) : (
             <KeyboardArrowUp className="up" />
           )}
-          <span className="price">{formatINR(stock.price)}</span>
+          <span className="price">{formatCurrency(stock.nativePrice || stock.price, stock.currency || 'INR')}</span>
         </div>
       </div>
       <WatchlistActions stock={stock} removeStockFromWatchlist={removeStockFromWatchlist} />

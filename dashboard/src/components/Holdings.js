@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSocket } from "../context/SocketContext";
 import axios from "axios";
 import { Skeleton } from "@mui/material";
 import { VerticalGraph } from "./VerticalGraph";
@@ -16,6 +17,7 @@ const Holdings = () => {
   const [allHoldings, setAllHoldings] = useState([]);
   const [livePrices, setLivePrices] = useState({});
   const [loading, setLoading] = useState(true);
+  const socket = useSocket();
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`)
@@ -49,11 +51,6 @@ const Holdings = () => {
         const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/quotes?symbols=${symbols}`);
         const priceMap = {};
         data.forEach(q => {
-          // Map back to the original holding name for matching
-          // If q.name is "INFY.NS", but holding name is "INFY", we need to strip .NS
-          // But if holding name is "RELIANCE.NS", we should leave it.
-          // Safer: just use the exact name we sent, but the backend returns what Yahoo returns.
-          // Let's just find the matching holding.
           const holding = allHoldings.find(h => getYahooSymbol(h.name) === q.name);
           if (holding) {
             priceMap[holding.name] = {
@@ -68,9 +65,36 @@ const Holdings = () => {
     };
 
     fetchPrices();
-    const interval = setInterval(fetchPrices, 10000);
-    return () => clearInterval(interval);
-  }, [allHoldings]);
+
+    if (socket) {
+      const symbolArray = allHoldings.map((h) => getYahooSymbol(h.name));
+      socket.emit("subscribe", symbolArray);
+
+      const handlePriceUpdate = (q) => {
+        setLivePrices((prev) => {
+          const holding = allHoldings.find(h => getYahooSymbol(h.name) === q.name);
+          if (holding) {
+            return {
+              ...prev,
+              [holding.name]: {
+                price: q.price,
+                percent: q.percent,
+                isDown: q.isDown
+              }
+            };
+          }
+          return prev;
+        });
+      };
+
+      socket.on("price_update", handlePriceUpdate);
+
+      return () => {
+        socket.off("price_update", handlePriceUpdate);
+        socket.emit("unsubscribe", symbolArray);
+      };
+    }
+  }, [allHoldings, socket]);
 
 
   const totalInvestment = allHoldings.reduce((sum, stock) => sum + (stock.avg * stock.qty), 0);

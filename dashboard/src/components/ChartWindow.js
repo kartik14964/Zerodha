@@ -28,6 +28,16 @@ const ChartWindow = ({ stock }) => {
       return `BSE:${cleanName.replace(".BO", "")}`;
     }
 
+    // German Stocks (.DE -> XETRA)
+    if (cleanName.endsWith(".DE")) {
+      return `XETR:${cleanName.replace(".DE", "")}`;
+    }
+    
+    // London Stocks (.L -> LSE)
+    if (cleanName.endsWith(".L")) {
+      return `LSE:${cleanName.replace(".L", "")}`;
+    }
+
     // Legacy data.js hardcoded Indian stocks without suffix
     const legacyIndianStocks = ["INFY", "ONGC", "TCS", "ITC", "RELIANCE", "WIPRO", "HDFCBANK", "SBIN", "BHARTIARTL"];
     if (legacyIndianStocks.includes(cleanName)) {
@@ -38,7 +48,7 @@ const ChartWindow = ({ stock }) => {
     return cleanName;
   };
 
-  const symbol = getTradingViewSymbol(stock.name || stock.symbol);
+  const symbol = getTradingViewSymbol(stock.symbol || stock.name);
 
   return (
     <div className="chart-container" id="chart-window">

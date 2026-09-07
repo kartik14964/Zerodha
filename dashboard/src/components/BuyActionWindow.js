@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 
 import GeneralContext from "./GeneralContext";
 
@@ -14,10 +15,16 @@ const formatINR = (value) => {
     maximumFractionDigits: 2
   });
 };
+
 const BuyActionWindow = ({ stock }) => {
   const [stockQuantity, setStockQuantity] = useState(1);
-  const [stockPrice, setStockPrice] = useState(stock.price);
+  const [stockPrice, setStockPrice] = useState(stock.nativePrice || stock.price);
   const { closeWindow } = useContext(GeneralContext);
+  
+  // Dynamically recover the exchange rate used by the backend
+  const exchangeRate = (stock.nativePrice && stock.nativePrice !== 0) 
+    ? (stock.price / stock.nativePrice) 
+    : 1;
 
   const handleBuyClick = async () => {
     if (stockQuantity <= 0 || stockPrice <= 0) {
@@ -26,11 +33,15 @@ const BuyActionWindow = ({ stock }) => {
     }
 
     try {
+      const idempotencyKey = uuidv4();
+      const executionPriceInr = Number(stockPrice) * exchangeRate;
+      
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/newOrder`, {
         name: stock.name,
         qty: Number(stockQuantity),
-        price: Number(stockPrice),
+        price: executionPriceInr,
         mode: "BUY",
+        idempotencyKey,
       });
 
       toast.success(response.data.message);
@@ -58,7 +69,7 @@ const BuyActionWindow = ({ stock }) => {
             />
           </fieldset>
           <fieldset>
-            <legend>Price</legend>
+            <legend>Price ({stock.currency || 'INR'})</legend>
             <input
               type="number"
               name="price"
@@ -74,7 +85,7 @@ const BuyActionWindow = ({ stock }) => {
       <div className="buttons">
         <span>
           Margin required{" "}
-          {formatINR(Number(stockQuantity) * Number(stockPrice))}
+          {formatINR(Number(stockQuantity) * Number(stockPrice) * exchangeRate)}
         </span>
         <div>
           <button className="btn btn-blue" onClick={handleBuyClick}>
