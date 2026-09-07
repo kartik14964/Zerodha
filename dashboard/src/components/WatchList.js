@@ -99,8 +99,16 @@ const WatchList = () => {
         
         if (savedList.length === 0) {
           const defaultStocks = [
+            { name: "RELIANCE", symbol: "RELIANCE.NS", price: 0, percent: "0.00%", isDown: false },
+            { name: "TCS", symbol: "TCS.NS", price: 0, percent: "0.00%", isDown: false },
+            { name: "HDFCBANK", symbol: "HDFCBANK.NS", price: 0, percent: "0.00%", isDown: false },
             { name: "INFY", symbol: "INFY.NS", price: 0, percent: "0.00%", isDown: false },
-            { name: "RELIANCE", symbol: "RELIANCE.NS", price: 0, percent: "0.00%", isDown: false }
+            { name: "SBI", symbol: "SBIN.NS", price: 0, percent: "0.00%", isDown: false },
+            { name: "BTC-USD", symbol: "BTC-USD", price: 0, percent: "0.00%", isDown: false },
+            { name: "ETH-USD", symbol: "ETH-USD", price: 0, percent: "0.00%", isDown: false },
+            { name: "AAPL", symbol: "AAPL", price: 0, percent: "0.00%", isDown: false },
+            { name: "TSLA", symbol: "TSLA", price: 0, percent: "0.00%", isDown: false },
+            { name: "NIFTY 50", symbol: "^NSEI", price: 0, percent: "0.00%", isDown: false }
           ];
           setLiveWatchlist(defaultStocks);
         } else {
