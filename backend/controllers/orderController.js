@@ -6,13 +6,14 @@ const { OrdersModel } = require("../model/OrdersModel");
 const { cache } = require("../services/marketDataService");
 
 const placeOrder = async (req, res) => {
-  const { name, qty, mode, idempotencyKey } = req.body;
+  const { name, symbol, qty, mode, idempotencyKey } = req.body;
   
   if (!idempotencyKey) {
     return res.status(400).json({ message: "Idempotency key is required." });
   }
 
-  const cachedStock = cache.get(name);
+  const lookupKey = symbol || name;
+  const cachedStock = cache.get(lookupKey);
   if (!cachedStock) {
     return res.status(400).json({ message: "Market data unavailable. Cannot price order safely." });
   }

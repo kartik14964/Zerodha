@@ -9,6 +9,8 @@ const GeneralContext = React.createContext({
   openSellWindow: (stock) => {},
   openChartWindow: (stock) => {},
   closeWindow: () => {},
+  refreshFlag: 0,
+  triggerRefresh: () => {},
 });
 
 export const GeneralContextProvider = (props) => {
@@ -17,6 +19,9 @@ export const GeneralContextProvider = (props) => {
   const [isChartWindowOpen, setIsChartWindowOpen] = useState(false);
   const [selectedStockUID, setSelectedStockUID] = useState(null);
   const [allHoldings, setAllHoldings] = useState([]);
+  const [refreshFlag, setRefreshFlag] = useState(0);
+
+  const triggerRefresh = () => setRefreshFlag(prev => prev + 1);
 
   // Fetch holdings 
   useEffect(() => {
@@ -54,6 +59,8 @@ export const GeneralContextProvider = (props) => {
         openSellWindow: handleOpenSellWindow,
         openChartWindow: handleOpenChartWindow,
         closeWindow: handleCloseWindow,
+        refreshFlag,
+        triggerRefresh,
       }}
     >
       {props.children}

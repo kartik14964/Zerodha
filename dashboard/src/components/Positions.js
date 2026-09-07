@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSocket } from "../context/SocketContext";
+import GeneralContext from "./GeneralContext";
+import { useContext } from "react";
 import axios from "axios";
 import { Skeleton } from "@mui/material";
 
@@ -17,6 +19,7 @@ const Positions = () => {
   const [livePrices, setLivePrices] = useState({});
   const [loading, setLoading] = useState(true);
   const socket = useSocket();
+  const { refreshFlag } = useContext(GeneralContext);
 
   useEffect(() => {
     axios
@@ -29,7 +32,7 @@ const Positions = () => {
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [refreshFlag]);
 
   useEffect(() => {
     if (allPositions.length === 0) return;

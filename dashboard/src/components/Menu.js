@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import axios from "axios";
 
 const Menu = () => {
@@ -7,6 +7,17 @@ const Menu = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   const [username, setUsername] = useState("User");
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === "/") setSelectedMenu(0);
+    else if (path === "/orders") setSelectedMenu(1);
+    else if (path === "/holdings") setSelectedMenu(2);
+    else if (path === "/positions") setSelectedMenu(3);
+    else if (path === "/funds") setSelectedMenu(4);
+    else if (path === "/apps") setSelectedMenu(5);
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchUser = async () => {

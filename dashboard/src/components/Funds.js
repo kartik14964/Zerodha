@@ -5,6 +5,8 @@ import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend } from 'c
 import { Doughnut } from 'react-chartjs-2';
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
+import GeneralContext from "./GeneralContext";
+import { useContext } from "react";
 
 ChartJS.register(ArcElement, ChartTooltip, Legend);
 
@@ -21,6 +23,7 @@ const Funds = () => {
   // Track the actual balance and used margin from the server
   const [balance, setBalance] = useState(0);
   const [usedMargin, setUsedMargin] = useState(0);
+  const { refreshFlag } = useContext(GeneralContext);
 
   useEffect(() => {
     // Fetch the actual user balance from the session
@@ -47,7 +50,7 @@ const Funds = () => {
     };
 
     fetchFunds();
-  }, []);
+  }, [refreshFlag]);
 
   const handleAddFunds = async () => {
     const { value: amount } = await Swal.fire({

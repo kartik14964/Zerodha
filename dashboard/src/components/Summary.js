@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { DoughnutChart } from "./DoughnutChart";
+import GeneralContext from "./GeneralContext";
+import { useContext } from "react";
 
 const formatINR = (value) => {
   return Number(value).toLocaleString('en-IN', {
@@ -16,6 +18,7 @@ const Summary = () => {
   const [userEmail, setUserEmail] = useState("");
   const [walletBalance, setWalletBalance] = useState(100000);
   const [livePrices, setLivePrices] = useState({});
+  const { refreshFlag } = useContext(GeneralContext);
 
   useEffect(() => {
     axios
@@ -35,7 +38,7 @@ const Summary = () => {
         }
       })
       .catch((err) => console.log(err));
-  }, []);
+  }, [refreshFlag]);
 
   // Fetch live prices for holdings
   useEffect(() => {

@@ -3,6 +3,8 @@ import { useSocket } from "../context/SocketContext";
 import axios from "axios";
 import { Skeleton } from "@mui/material";
 import { VerticalGraph } from "./VerticalGraph";
+import GeneralContext from "./GeneralContext";
+import { useContext } from "react";
 
 const formatINR = (value) => {
   return Number(value).toLocaleString('en-IN', {
@@ -18,6 +20,7 @@ const Holdings = () => {
   const [livePrices, setLivePrices] = useState({});
   const [loading, setLoading] = useState(true);
   const socket = useSocket();
+  const { refreshFlag } = useContext(GeneralContext);
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`)
@@ -29,7 +32,7 @@ const Holdings = () => {
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [refreshFlag]);
 
   useEffect(() => {
     if (allHoldings.length === 0) return;

@@ -17,7 +17,7 @@ const formatINR = (value) => {
 const SellActionWindow = ({ stock, holdings }) => {
   const [stockQuantity, setStockQuantity] = useState(1);
   const [stockPrice, setStockPrice] = useState(stock.nativePrice || stock.price);
-  const { closeWindow } = useContext(GeneralContext);
+  const { closeWindow, triggerRefresh } = useContext(GeneralContext);
   
   // Dynamically recover the exchange rate used by the backend
   const exchangeRate = (stock.nativePrice && stock.nativePrice !== 0) 
@@ -44,6 +44,7 @@ const SellActionWindow = ({ stock, holdings }) => {
       
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/newOrder`, {
         name: stock.name,
+        symbol: stock.symbol || stock.name,
         qty: Number(stockQuantity),
         price: executionPriceInr,
         mode: "SELL",
@@ -51,6 +52,7 @@ const SellActionWindow = ({ stock, holdings }) => {
       });
 
       toast.success(response.data.message);
+      triggerRefresh();
       closeWindow();
     } catch (error) {
       const errorMessage = error.response?.data?.message || "Order failed";
