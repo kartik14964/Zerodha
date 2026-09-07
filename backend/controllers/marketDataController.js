@@ -44,4 +44,18 @@ const searchQuotes = async (req, res) => {
   }
 };
 
-module.exports = { getQuotes, searchQuotes };
+const getMarketStatus = async (req, res) => {
+  try {
+    // Query NIFTY 50 as the representative index for Indian Market
+    const quote = await yahooFinance.quote("^NSEI");
+    res.json({
+      state: quote.marketState || "CLOSED", // "REGULAR", "PRE", "POST", "CLOSED"
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("Error fetching market status:", err);
+    res.status(500).json({ state: "UNKNOWN" });
+  }
+};
+
+module.exports = { getQuotes, searchQuotes, getMarketStatus };

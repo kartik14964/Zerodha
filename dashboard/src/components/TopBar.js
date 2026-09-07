@@ -3,45 +3,33 @@ import axios from "axios";
 
 import Menu from "./Menu";
 
-const checkMarketStatus = () => {
-  const now = new Date();
-  
-  // Convert current time to IST
-  const istOptions = { timeZone: 'Asia/Kolkata', hour12: false, hour: 'numeric', minute: 'numeric', second: 'numeric', weekday: 'short' };
-  const parts = new Intl.DateTimeFormat('en-US', istOptions).formatToParts(now);
-  
-  const getPart = (type) => parts.find(p => p.type === type).value;
-  
-  const weekday = getPart('weekday');
-  const hour = parseInt(getPart('hour'), 10);
-  const minute = parseInt(getPart('minute'), 10);
-  const second = parseInt(getPart('second'), 10);
-  
-  // Check if weekend
-  if (weekday === 'Sat' || weekday === 'Sun') {
-    return { isOpen: false, timeString: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}` };
-  }
-  
-  // Check if between 09:15 and 15:30
-  const timeInMinutes = hour * 60 + minute;
-  const isOpen = timeInMinutes >= (9 * 60 + 15) && timeInMinutes < (15 * 60 + 30);
-  
-  return { isOpen, timeString: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}` };
-};
+// We no longer rely on frontend clock math for market status.
 
 const MarketStatus = () => {
-  const [status, setStatus] = useState(checkMarketStatus());
+  const [status, setStatus] = useState({ isOpen: false, label: "Checking..." });
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setStatus(checkMarketStatus());
-    }, 1000);
+    const fetchStatus = async () => {
+      try {
+        const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/market-status`);
+        // Yahoo Finance returns "REGULAR" during normal open hours. 
+        // Other states include "PRE", "POST", "CLOSED".
+        const isOpen = data.state === "REGULAR";
+        setStatus({ isOpen, label: data.state });
+      } catch (err) {
+        console.error("Failed to fetch market status", err);
+      }
+    };
+
+    fetchStatus();
+    // Poll Yahoo Finance via backend every 60 seconds
+    const timer = setInterval(fetchStatus, 60000);
     return () => clearInterval(timer);
   }, []);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: 'auto', marginLeft: '20px', padding: '4px 10px', borderRadius: '4px', backgroundColor: '#f8f9fa', fontSize: '0.85rem' }}>
-      <span style={{ fontWeight: '500' }}>{status.timeString}</span>
+      <span style={{ fontWeight: '500' }}>{status.label}</span>
       <span style={{
         display: 'inline-block',
         width: '8px',
