@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { UserModel } = require("../model/UserModel");
+const { WatchlistModel } = require("../model/WatchlistModel");
 
 const JWT_SECRET = process.env.JWT_SECRET || "zerodha_super_secret";
 
@@ -13,6 +14,28 @@ const signup = async (req, res) => {
 
     const user = new UserModel({ email, password });
     await user.save();
+
+    const defaultStocks = [
+      { name: "RELIANCE", symbol: "RELIANCE.NS" },
+      { name: "TCS", symbol: "TCS.NS" },
+      { name: "HDFCBANK", symbol: "HDFCBANK.NS" },
+      { name: "INFY", symbol: "INFY.NS" },
+      { name: "SBI", symbol: "SBIN.NS" },
+      { name: "BTC-USD", symbol: "BTC-USD" },
+      { name: "ETH-USD", symbol: "ETH-USD" },
+      { name: "AAPL", symbol: "AAPL" },
+      { name: "TSLA", symbol: "TSLA" },
+      { name: "NIFTY 50", symbol: "^NSEI" }
+    ];
+
+    const watchlistEntries = defaultStocks.map(stock => ({
+      user: user._id,
+      name: stock.name,
+      symbol: stock.symbol
+    }));
+
+    await WatchlistModel.insertMany(watchlistEntries);
+
     res.status(201).json({ message: "Account created! Please login." });
   } catch (err) {
     console.log(" THE REAL ERROR IS:", err);
