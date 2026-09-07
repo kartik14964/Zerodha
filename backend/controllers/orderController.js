@@ -3,23 +3,30 @@ const { UserModel } = require("../model/UserModel");
 const { HoldingsModel } = require("../model/HoldingsModel");
 const { PositionsModel } = require("../model/PositionsModel");
 const { OrdersModel } = require("../model/OrdersModel");
+const { cache } = require("../services/marketDataService");
 
 const placeOrder = async (req, res) => {
-  const { name, qty, price, mode, idempotencyKey } = req.body;
+  const { name, qty, mode, idempotencyKey } = req.body;
   
   if (!idempotencyKey) {
     return res.status(400).json({ message: "Idempotency key is required." });
   }
 
+  const cachedStock = cache.get(name);
+  if (!cachedStock) {
+    return res.status(400).json({ message: "Market data unavailable. Cannot price order safely." });
+  }
+
   const orderQty = Number(qty);
-  const orderPrice = Number(price);
+  // Security Fix: Never trust client price. Use authoritative server-side cached INR price.
+  const orderPrice = Number(cachedStock.price); 
   const totalTransactionValue = orderQty * orderPrice;
   const userId = req.user._id;
 
   // Initial fast check for existing order (Idempotency)
   const existingOrderCheck = await OrdersModel.findOne({ user: userId, idempotencyKey });
   if (existingOrderCheck) {
-    if (existingOrderCheck.name !== name || existingOrderCheck.qty !== orderQty || existingOrderCheck.price !== orderPrice || existingOrderCheck.mode !== mode) {
+    if (existingOrderCheck.name !== name || existingOrderCheck.qty !== orderQty || existingOrderCheck.mode !== mode) {
        return res.status(409).json({ message: "Conflict: Same idempotency key used with different parameters." });
     }
     return res.status(200).json({ message: "Order processed successfully (Idempotent response)" });
@@ -133,7 +140,7 @@ const placeOrder = async (req, res) => {
     if (err.code === 11000) {
       const existingOrder = await OrdersModel.findOne({ user: userId, idempotencyKey });
       if (existingOrder) {
-        if (existingOrder.name !== name || existingOrder.qty !== orderQty || existingOrder.price !== orderPrice || existingOrder.mode !== mode) {
+        if (existingOrder.name !== name || existingOrder.qty !== orderQty || existingOrder.mode !== mode) {
           return res.status(409).json({ message: "Conflict: Same idempotency key used with different parameters." });
         }
         return res.status(200).json({ message: "Order processed successfully (Idempotent response)" });

@@ -134,4 +134,4 @@ const getInitialQuotes = async (symbols) => {
   return symbols.map(s => cache.get(s)).filter(Boolean);
 };
 
-module.exports = { initMarketDataService, addSymbols, removeSymbols, getInitialQuotes };
+module.exports = { initMarketDataService, addSymbols, removeSymbols, getInitialQuotes, cache };
