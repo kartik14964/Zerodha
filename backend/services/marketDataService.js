@@ -13,8 +13,8 @@ let ioRef = null;
 
 const initMarketDataService = (io) => {
   ioRef = io;
-  // Poll Yahoo Finance every 2 seconds for a closer to "real-time" feel (Note: Risks rate-limiting)
-  setInterval(fetchAndBroadcast, 2000);
+  // Poll Yahoo Finance every 5 seconds for a closer to "real-time" feel (Note: Risks rate-limiting)
+  setInterval(fetchAndBroadcast, 5000);
 };
 
 const addSymbols = (symbols) => {

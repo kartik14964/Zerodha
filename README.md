@@ -1,6 +1,6 @@
-# Full-Stack Simulated Trading Platform
+# Full-Stack Trading Platform
 
-A full-stack simulated trading platform focused on transactional order processing, idempotency, real-time market-data delivery, and concurrency safety. This project features a secure authentication flow and an interactive trading dashboard where users can monitor holdings, execute market orders, view positions, manage funds, and visualize their portfolio performance.
+A full-stack trading platform focused on transactional order processing, idempotency, real-time market-data delivery, and concurrency safety. This project features a secure authentication flow and an interactive trading dashboard where users can monitor holdings, execute market orders, view positions, manage funds, and visualize their portfolio performance.
 
 ---
 
@@ -8,28 +8,29 @@ A full-stack simulated trading platform focused on transactional order processin
 
 - **Transactional and Idempotent Order Engine**: Market orders (`BUY` / `SELL`) are processed within MongoDB Transactions. The engine verifies balances, deducts funds, updates holdings, and modifies positions in an atomic chain, ensuring transactional consistency and concurrency safety. Any failure during the workflow instantly rolls back the database state.
 - **Database-Enforced Idempotency**: Order execution prevents duplicate charges and race conditions via unique UUID `idempotencyKeys` coupled with MongoDB compound unique indexes on `(user, idempotencyKey)`. Identical concurrent requests are gracefully handled and safely returned without double-charging.
-- **Real-Time Market Data Delivery**: WebSocket-based client updates with 2-second upstream market-data refreshes. A shared `SocketContext` in the React frontend maintains a persistent connection, listening to symbol-specific rooms (e.g., `stock:RELIANCE.NS`) to ensure instant UI updates.
-- **Multi-Currency Architecture**: The dashboard dynamically displays global assets (like US Stocks or Crypto) in their native prices and currencies (e.g., `$79,000`). At the exact moment of execution, the UI calculates the true INR conversion using a live, background-polled Forex exchange rate (`INR=X`), ensuring the backend Transactional Order Engine deducts the precise local margin (e.g., `₹66,00,000`) without complex multi-currency database overhead.
+- **Real-Time Market Data Delivery**: WebSocket-based client updates with periodic (e.g., 5s) upstream market-data refreshes. A shared `SocketContext` in the React frontend maintains a persistent connection, listening to symbol-specific rooms (e.g., `stock:RELIANCE.NS`) to ensure instant UI updates.
+- **Multi-Currency Price & Margin Handling**: The dashboard displays global assets in their native currencies and shows an estimated INR equivalent using the latest FX rate. During order execution, the backend uses the trusted cached FX rate to calculate the authoritative INR margin, avoiding unnecessary multi-currency accounting complexity.
 
   ```mermaid
-  sequenceDiagram
-      participant YF as Yahoo Finance
-      participant BE as Node.js Backend
-      participant FE as React Dashboard
+  flowchart TD
+      YF["Yahoo Finance API"]
       
-      Note over YF,BE: HTTP Polling (Every 2s)
-      BE->>YF: Fetch [BTC-USD, AAPL, INR=X]
-      YF-->>BE: Returns [Price: $79,000, FX: 83.5]
+      YF -->|"HTTP Polling (Backend periodic refresh every 5s)<br/>BTC-USD: $79,000 | INR=X: ₹83.5"| BE
       
-      Note over BE: Applies Math (79,000 * 83.5)
+      subgraph Backend ["Node.js Backend"]
+          BE["Market Data Service"] --> Cache["In-Memory Cache"]
+          Cache --> Socket["Socket.IO Server"]
+      end
       
-      Note over BE,FE: Socket.IO (Instant Broadcast)
-      BE->>FE: Emits { nativePrice: 79000, inrPrice: 6.6M }
+      Socket -->|"Instant WebSocket Broadcast<br/>{ native: 79000, currency: 'USD' }"| FE
       
-      Note over FE: Watchlist displays $79,000<br/>Buy Window executes with 6.6M INR
+      subgraph Frontend ["React Dashboard"]
+          FE["Socket.io-client"] --> WL["Watchlist<br/>(Displays $79,000)"]
+          WL --> BW["Buy Action Window<br/>(Displays Estimated ₹6.6M INR Margin)"]
+      end
   ```
 
-- **Smart Caching Layer**: Integrated `node-cache` as an in-memory cache for the Yahoo Finance API, reducing external API rate-limiting blocks and optimizing WebSocket broadcast efficiency.
+- **Smart Caching Layer**: Uses `node-cache` to reduce redundant upstream requests and improve delivery efficiency for frequently requested symbols.
 - **Interactive Candlestick Charts**: Integrated `react-ts-tradingview-widgets` to serve interactive TradingView charts. Intelligent symbol mapping ensures that Indian stocks are routed through BSE to bypass delayed data restrictions.
 - **Secure Authentication**: End-to-end user authentication using JSON Web Tokens (JWT) and BcryptJS password hashing.
 
@@ -56,7 +57,6 @@ Zerodha/
     *   `marketDataService.js`: Fetches market data from Yahoo Finance and manages the in-memory cache.
     *   `marketSocket.js`: Manages WebSocket connections, symbol subscriptions, rooms, and live broadcasting.
 *   📂 [model/](./backend/model) & 📂 [schemas/](./backend/schemas): Mongoose schemas and models defining database structures and unique compound indexes.
-*   📂 [tests/](./backend/tests): Jest integration testing suites focusing on highly concurrent stress testing.
 
 #### 📂 [Frontend (Auth & Landing)](./frontend)
 *   📂 `src/landing_page`: Components representing specific sections of the main website.
@@ -71,23 +71,7 @@ Zerodha/
     *   [BuyActionWindow.js](./dashboard/src/components/BuyActionWindow.js) / [SellActionWindow.js](./dashboard/src/components/SellActionWindow.js): Context windows for placing market orders (auto-generating idempotency keys).
     *   [Holdings.js](./dashboard/src/components/Holdings.js) & [Positions.js](./dashboard/src/components/Positions.js): Tables showing owned assets and real-time profit/loss (P&L) via WebSocket streams.
     *   [Orders.js](./dashboard/src/components/Orders.js): Logs transaction histories of placed orders.
-    *   [Funds.js](./dashboard/src/components/Funds.js): Visualizer for available margin and user balances with functionality to deposit/withdraw simulated cash.
-
----
-
-## 🧪 Testing & Measurable Concurrency Safety
-
-The order engine has been explicitly tested against extreme concurrency and idempotency exploits using automated Jest integration test suites.
-
-**Idempotency & Double-Spend Protection Results:**
-When blasting the API with 100 exactly identical concurrent requests (simulating a network retry loop or duplicate submissions):
-- `-> 1 order created`
-- `-> 1 balance deduction`
-- `-> 1 holding/position state change`
-- `-> 0 duplicate orders`
-- `-> 0 inconsistent database states`
-
-The remaining 99 duplicate requests are safely rejected at the database level (`E11000`), caught by the controller, and gracefully returned to the client as idempotent successes without corrupting the financial ledger.
+    *   [Funds.js](./dashboard/src/components/Funds.js): Visualizer for available margin and user balances with functionality to deposit/withdraw cash.
 
 ---
 
@@ -147,15 +131,6 @@ npm install
 npm start
 ```
 
-### Step 3: Run Concurrency Stress Tests (Optional)
-
-To verify the integrity of the backend transaction engine against race conditions and idempotency exploits, you can run the Jest integration test suite:
-
-```bash
-cd backend
-npm test
-```
-
 ---
 
 ## 🔌 API Endpoints Summary
@@ -172,7 +147,7 @@ All routes (except `/login`, `/signup`, and `/ping`) require authentication via 
 | `/quotes` | GET | REST market-data endpoint (fetches initial prices for frontend hydration) |
 | `/allHoldings`| GET | Returns user's stock holdings |
 | `/allPositions`| GET | Returns user's active market positions |
-| `/addFunds` | POST | Injects simulated cash into the user's account |
+| `/addFunds` | POST | Injects cash into the user's account |
 | `/withdrawFunds`| POST| Withdraws cash from the user's account |
 | `/newOrder` | POST | Executes a `BUY`/`SELL` order inside a MongoDB transaction (requires `idempotencyKey`) |
 | `/allOrders` | GET | Returns log history of all user orders |
@@ -184,9 +159,3 @@ All routes (except `/login`, `/signup`, and `/ping`) require authentication via 
 1. **Authentication:** End-to-end JWT validation across all HTTP routes and Socket.io upgrade requests. Passwords encrypted natively with `bcrypt`.
 2. **MongoDB Transactions:** Transactions ensure balance, holdings, positions, and order records are committed or rolled back atomically. The system writes to the `Users`, `Orders`, `Holdings`, and `Positions` collections as an indivisible unit.
 3. **Database-Idempotency:** A unique compound index on `(user, idempotencyKey)` inside the database actively rejects and mitigates identical concurrent duplicate requests, protecting against accidental retries and duplicate concurrent submissions.
-
----
-
-## ⚠️ Limitations
-
-*Note: This is a simulated trading platform and does not connect to a real brokerage or execute real financial transactions. Market data availability and latency depend on the upstream Yahoo Finance source.*
