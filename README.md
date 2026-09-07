@@ -1,6 +1,17 @@
 # Zerodha Clone 📈
 
-A full-stack, responsive clone of the popular trading platform **Zerodha** (Kite). This project features a landing page, a secure authentication flow, and an interactive, real-time trading dashboard where users can monitor holdings, execute buy/sell orders, view positions, manage funds, and visualize their portfolio performance.
+A full-stack, highly-responsive clone of the popular trading platform **Zerodha** (Kite). This project features a landing page, a secure authentication flow, and an interactive, real-time trading dashboard where users can monitor holdings, execute buy/sell orders, view positions, manage funds, and visualize their portfolio performance.
+
+---
+
+## ✨ Key Features
+
+- **Real-Time Live Watchlist**: Integrated with the Yahoo Finance API, the watchlist automatically polls for price updates every 10 seconds.
+- **Micro-Animations**: Features professional UI micro-interactions, such as flashing red/green row highlights when stock prices fluctuate, mirroring real Bloomberg/Zerodha terminals.
+- **Interactive Candlestick Charts**: Integrated `react-ts-tradingview-widgets` to serve interactive TradingView charts. Intelligent symbol mapping ensures that Indian stocks are routed through BSE to bypass delayed data restrictions.
+- **Premium UI Structure**: Flawless, pixel-perfect flexbox layouts, right-aligned financial tables for optimal numerical scannability, and custom sleek WebKit scrollbars.
+- **Full Trade Lifecycle**: Seamless execution of `BUY` and `SELL` market orders, complete with balance validation, portfolio updates, and historical order logging.
+- **Secure Authentication**: End-to-end user authentication using JSON Web Tokens (JWT) and BcryptJS.
 
 ---
 
@@ -8,7 +19,7 @@ A full-stack, responsive clone of the popular trading platform **Zerodha** (Kite
 
 The repository is structured into three main directories:
 
-```
+```text
 Zerodha/
 ├── backend/            # Express.js REST API server & MongoDB connection
 ├── frontend/           # React application for marketing and landing pages
@@ -18,42 +29,38 @@ Zerodha/
 ### File & Folder Breakdown
 
 #### 📂 [Backend](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend)
-*   [index.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/index.js): Entry point of the Express API, routing, middlewares (CORS, JWT parser, Security headers), and order processing logic.
+*   [index.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/index.js): Entry point of the Express API, routing, middlewares (CORS, JWT parser, Security headers), order processing, and live Yahoo Finance scraping.
 *   📂 [model/](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/model): Mongoose models mapping to the database collections.
     *   [UserModel.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/model/UserModel.js)
     *   [HoldingsModel.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/model/HoldingsModel.js)
     *   [PositionsModel.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/model/PositionsModel.js)
     *   [OrdersModel.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/model/OrdersModel.js)
+    *   [WatchlistModel.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/model/WatchlistModel.js)
 *   📂 [schemas/](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/schemas): Mongoose schemas defining fields, validations, and structures.
-    *   [UserSchema.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/schemas/UserSchema.js)
-    *   [HoldingsSchema.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/schemas/HoldingsSchema.js)
-    *   [PositionsSchema.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/schemas/PositionsSchema.js)
-    *   [OrdersSchema.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/backend/schemas/OrdersSchema.js)
 
 #### 📂 [Frontend (Auth & Landing)](file:///Users/kartikrawat/Desktop/Projects/Zerodha/frontend)
 *   📂 `src/landing_page`: Components representing specific sections of the main website.
     *   [Navbar.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/frontend/src/landing_page/Navbar.js) & [Footer.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/frontend/src/landing_page/Footer.js): Shared layouts.
     *   `Auth/`: Handles signup and login views.
     *   `home/`, `about/`, `products/`, `pricing/`, `support/`: Content sections styled to match Zerodha's original web assets.
-    *   [OpenAccount.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/frontend/src/landing_page/OpenAccount.js): Call to action section.
 
 #### 📂 [Dashboard](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard)
 *   📂 `src/components`: Modules powering the trading experience.
     *   [Dashboard.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/Dashboard.js): Grid manager loading interactive subcomponents.
-    *   [WatchList.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/WatchList.js): Displays stock updates, tickers, and triggers buy/sell dialogs.
+    *   [WatchList.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/WatchList.js): Displays live stock updates, flashes on price change, and triggers buy/sell/chart dialogs.
+    *   [ChartWindow.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/ChartWindow.js): Interactive TradingView charting integration.
     *   [BuyActionWindow.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/BuyActionWindow.js) / [SellActionWindow.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/SellActionWindow.js): Context windows for placing market orders.
-    *   [Holdings.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/Holdings.js) & [Positions.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/Positions.js): Tables showing owned assets, average price, profit/loss (P&L).
+    *   [Holdings.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/Holdings.js) & [Positions.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/Positions.js): Tables showing owned assets, average price, and real-time profit/loss (P&L).
     *   [Orders.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/Orders.js): Logs transaction histories of placed orders.
-    *   [DoughnutChart.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/DoughnutChart.js) & [VerticalGraph.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/VerticalGraph.js): Portfolio allocation visualizations using Chart.js.
     *   [Funds.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/Funds.js): Visualizer for available margin and user balances.
 
 ---
 
 ## 🛠️ Technology Stack
 
-*   **Frontend & Dashboard:** React (v19), React Router DOM (v7), Axios (HTTP Client), Chart.js (Data Visualization), Material UI (Icons & Design Elements), SweetAlert2 (Popups/Alerts).
-*   **Backend:** Express.js (v5), Node.js, MongoDB (Mongoose v9).
-*   **Security:** JSON Web Tokens (JWT) for session management, BcryptJS for password hashing, and custom CORS policies.
+*   **Frontend & Dashboard:** React (v19), React Router DOM (v7), Axios (HTTP Client), Chart.js (Data Visualization), Material UI (Icons & Design Elements), `react-ts-tradingview-widgets`, `react-hot-toast`.
+*   **Backend:** Express.js (v5), Node.js, MongoDB (Mongoose v9), `yahoo-finance2` (Real-time Market Data).
+*   **Security:** JSON Web Tokens (JWT) for session management, BcryptJS for password hashing, custom CORS policies.
 
 ---
 
@@ -124,23 +131,25 @@ npm start
 
 ## 🔌 API Endpoints Summary
 
-All routes (except `/login` and `/signup`) require authentication via a Bearer token in the `Authorization` header: `Authorization: Bearer <token>`.
+All routes (except `/login`, `/signup`, and `/ping`) require authentication via a Bearer token in the `Authorization` header: `Authorization: Bearer <token>`.
 
-| Route | Method | Authentication | Description |
-| :--- | :--- | :--- | :--- |
-| `/signup` | POST | None | Creates a new user account with hashed password |
-| `/login` | POST | None | Authenticates user, returns JWT and user info |
-| `/logout` | POST | None | Handles session ending client-side |
-| `/me` | GET | JWT Required | Fetches user balance and account metadata |
-| `/allHoldings`| GET | JWT Required | Returns user's stock holdings |
-| `/allPositions`| GET | JWT Required | Returns user's active market positions |
-| `/newOrder` | POST | JWT Required | Executes a `BUY`/`SELL` order, adjusts balance, holdings, positions, and logs transaction |
-| `/allOrders` | GET | JWT Required | Returns log history of all user orders |
+| Route | Method | Description |
+| :--- | :--- | :--- |
+| `/signup` | POST | Creates a new user account with hashed password |
+| `/login` | POST | Authenticates user, returns JWT and user info |
+| `/logout` | POST | Handles session ending client-side |
+| `/me` | GET | Fetches user balance and account metadata |
+| `/watchlist` | GET/POST/DEL | Manages a user's custom watchlist symbols in MongoDB |
+| `/quotes` | GET | Scrapes and serves real-time Yahoo Finance data |
+| `/allHoldings`| GET | Returns user's stock holdings |
+| `/allPositions`| GET | Returns user's active market positions |
+| `/newOrder` | POST | Executes a `BUY`/`SELL` order, adjusts balance, logs transaction |
+| `/allOrders` | GET | Returns log history of all user orders |
 
 ---
 
 ## 🔒 Security Gatekeeping
 Sessions are validated seamlessly:
 *   The backend validates credentials and issues JWTs.
-*   Client dashboards restrict layout access via [ProtectedRoute.js](file:///Users/kartikrawat/Desktop/Projects/Zerodha/dashboard/src/components/ProtectedRoute.js), redirecting unauthenticated traffic back to login.
+*   Client dashboards restrict layout access via `ProtectedRoute.js`, redirecting unauthenticated traffic back to login.
 *   Order values are validated server-side to prevent overdraft or selling assets not owned.
