@@ -6,7 +6,8 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
+const YahooFinance = require("yahoo-finance2").default;
+const yahooFinance = new YahooFinance();
 const PORT = process.env.PORT || 3002;
 const uri = process.env.MONGO_URL;
 const JWT_SECRET = process.env.JWT_SECRET || "zerodha_super_secret";
@@ -18,6 +19,7 @@ const { HoldingsModel } = require("./model/HoldingsModel");
 const { PositionsModel } = require("./model/PositionsModel");
 const { OrdersModel } = require("./model/OrdersModel");
 const { UserModel } = require("./model/UserModel");
+const { WatchlistModel } = require("./model/WatchlistModel");
 
 // Middleware
 const securityMiddleware = (req, res, next) => {
@@ -43,6 +45,56 @@ app.use(bodyParser.json());
 // Ping route to wake up Render server
 app.get("/ping", (req, res) => {
   res.status(200).json({ message: "pong" });
+});
+
+// Yahoo Finance Quotes Route
+app.get("/quotes", async (req, res) => {
+  try {
+    const symbols = req.query.symbols;
+    if (!symbols) return res.status(400).json({ error: "Missing symbols query parameter" });
+    const symbolArray = symbols.split(",");
+    
+    const quotes = await yahooFinance.quote(symbolArray);
+    const results = Array.isArray(quotes) ? quotes : [quotes];
+    
+    const formatted = results.map(q => ({
+      name: q.symbol,
+      price: q.regularMarketPrice,
+      percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
+      isDown: (q.regularMarketChangePercent || 0) < 0
+    }));
+    
+    res.json(formatted);
+  } catch (err) {
+    console.error("Error fetching quotes:", err);
+    res.status(500).json({ error: "Failed to fetch quotes" });
+  }
+});
+
+// Yahoo Finance Search Route
+app.get("/search", async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query) return res.status(400).json({ error: "Missing query parameter" });
+    
+    // Search Yahoo Finance
+    const result = await yahooFinance.search(query);
+    
+    // Filter out irrelevant results, keep equities, ETFs, crypto, and indices
+    const formatted = result.quotes
+      .filter(q => ["EQUITY", "ETF", "CRYPTOCURRENCY", "INDEX"].includes(q.quoteType))
+      .slice(0, 5) // Return top 5 results
+      .map(q => ({
+        name: q.symbol,
+        longName: q.longname || q.shortname || q.symbol,
+        exchange: q.exchange
+      }));
+      
+    res.json(formatted);
+  } catch (err) {
+    console.error("Error searching quotes:", err);
+    res.status(500).json({ error: "Failed to search" });
+  }
 });
 
 // JWT Auth Gatekeeper
@@ -150,8 +202,44 @@ app.get("/me", authenticateToken, async (req, res) => {
 });
 
 app.get("/allHoldings", authenticateToken, async (req, res) => {
-  let userHoldings = await HoldingsModel.find({ user: req.user._id });
-  res.json(userHoldings);
+  let tempHoldings = await HoldingsModel.find({ user: req.user._id });
+  res.json(tempHoldings);
+});
+
+app.get("/watchlist", authenticateToken, async (req, res) => {
+  let watchlist = await WatchlistModel.find({ user: req.user._id });
+  res.json(watchlist);
+});
+
+app.post("/watchlist", authenticateToken, async (req, res) => {
+  try {
+    const { name, symbol } = req.body;
+    const existing = await WatchlistModel.findOne({ user: req.user._id, name });
+    
+    if (existing) {
+      return res.status(400).json({ message: "Stock already in watchlist" });
+    }
+
+    const newEntry = new WatchlistModel({
+      user: req.user._id,
+      name,
+      symbol
+    });
+    
+    await newEntry.save();
+    res.json(newEntry);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to add to watchlist" });
+  }
+});
+
+app.delete("/watchlist/:id", authenticateToken, async (req, res) => {
+  try {
+    await WatchlistModel.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    res.json({ message: "Removed from watchlist" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to remove from watchlist" });
+  }
 });
 
 app.get("/allPositions", authenticateToken, async (req, res) => {
@@ -278,6 +366,54 @@ app.get("/allOrders", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("Error fetching orders:", err);
     res.status(500).json({ message: "Server error while fetching orders." });
+  }
+});
+
+app.post("/addFunds", authenticateToken, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+    
+    const user = await UserModel.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    user.balance += Number(amount);
+    await user.save();
+    
+    res.json({ message: "Funds added successfully", balance: user.balance });
+  } catch (err) {
+    console.error("Error adding funds:", err);
+    res.status(500).json({ message: "Server error while adding funds." });
+  }
+});
+
+app.post("/withdrawFunds", authenticateToken, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+    
+    const user = await UserModel.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    if (user.balance < Number(amount)) {
+      return res.status(400).json({ message: "Insufficient funds to withdraw" });
+    }
+    
+    user.balance -= Number(amount);
+    await user.save();
+    
+    res.json({ message: "Funds withdrawn successfully", balance: user.balance });
+  } catch (err) {
+    console.error("Error withdrawing funds:", err);
+    res.status(500).json({ message: "Server error while withdrawing funds." });
   }
 });
 

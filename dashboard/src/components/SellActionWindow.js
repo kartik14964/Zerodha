@@ -1,8 +1,17 @@
 import React, { useState, useContext } from "react";
 import axios from "axios";
 import GeneralContext from "./GeneralContext";
-import Swal from "sweetalert2";
+import toast from "react-hot-toast";
 import "./BuyActionWindow.css";
+
+const formatINR = (value) => {
+  return Number(value).toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
 
 const SellActionWindow = ({ stock, holdings }) => {
   const [stockQuantity, setStockQuantity] = useState(1);
@@ -19,11 +28,7 @@ const SellActionWindow = ({ stock, holdings }) => {
 
   const handleSellClick = async () => {
     if (!canSell) {
-      Swal.fire({
-        icon: "error",
-        title: "Cannot Sell",
-        text: `You can only sell up to ${availableQty} shares!`,
-      });
+      toast.error(`You can only sell up to ${availableQty} shares!`);
       return;
     }
 
@@ -38,19 +43,11 @@ const SellActionWindow = ({ stock, holdings }) => {
         }
       );
 
-      Swal.fire({
-        icon: "success",
-        title: "Sell Successful",
-        text: response.data.message,
-      });
+      toast.success(response.data.message);
       closeWindow();
     } catch (error) {
       const errorMessage = error.response?.data?.message || "Order failed";
-      Swal.fire({
-        icon: "error",
-        title: "Sell Failed",
-        text: errorMessage,
-      });
+      toast.error(errorMessage);
     }
   };
 
@@ -91,8 +88,8 @@ const SellActionWindow = ({ stock, holdings }) => {
 
       <div className="buttons">
         <span>
-          Credit expected: ₹
-          {(Number(stockQuantity) * Number(stockPrice)).toFixed(2)}
+          Credit expected:{" "}
+          {formatINR(Number(stockQuantity) * Number(stockPrice))}
         </span>
         <div>
           <button

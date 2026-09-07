@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import Swal from "sweetalert2";
+import toast from "react-hot-toast";
 import "./Auth.css";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -19,14 +19,12 @@ const Login = () => {
     const { email, password } = formData;
 
     if (!EMAIL_REGEX.test(email)) {
-      return Swal.fire(
-        "Invalid Email",
-        "Please enter a valid email address.",
-        "warning",
-      );
+      toast.error("Please enter a valid email address.");
+      return;
     }
     if (password.length < 1) {
-      return Swal.fire("Missing Password", "Password is required.", "warning");
+      toast.error("Password is required.");
+      return;
     }
 
     setLoading(true);
@@ -40,26 +38,14 @@ const Login = () => {
       // Save token locally in App 1
       localStorage.setItem("token", response.data.token);
 
-      Swal.fire({
-        title: "Welcome Back!",
-        text: "Login successful. Redirecting to dashboard...",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
-      }).then(() => {
+      toast.success("Login successful. Redirecting to dashboard...");
+      setTimeout(() => {
         window.location.replace(`${process.env.REACT_APP_DASHBOARD_URL}/?token=${response.data.token}`);
-      });
+      }, 1500);
     } catch (err) {
       // ... catch block remains the same
       setLoading(false);
-      Swal.fire({
-        title: "Login Failed",
-        text:
-          err.response?.data?.message ||
-          "Invalid credentials. Please try again.",
-        icon: "error",
-        confirmButtonColor: "#df514c",
-      });
+      toast.error(err.response?.data?.message || "Invalid credentials. Please try again.");
     }
   };
 

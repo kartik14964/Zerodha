@@ -48,7 +48,7 @@ export const watchlist = [
     isDown: false,
   },
   {
-    name: "HUL",
+    name: "HINDUNILVR",
     price: 512.4,
     percent: "1.04%",
     isDown: false,
@@ -133,7 +133,7 @@ export const holdings = [
     isLoss: true,
   },
   {
-    name: "SGBMAY29",
+    name: "GOLDBEES",
     qty: 2,
     avg: 4727.0,
     price: 4719.0,

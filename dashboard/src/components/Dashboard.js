@@ -10,10 +10,12 @@ import Positions from "./Positions";
 import Summary from "./Summary";
 import WatchList from "./WatchList";
 import { GeneralContextProvider } from "./GeneralContext";
+import { Toaster } from "react-hot-toast";
 
 const Dashboard = () => {
   return (
     <div className="dashboard-container">
+      <Toaster position="bottom-right" reverseOrder={false} />
       <GeneralContextProvider>
         <WatchList />
       </GeneralContextProvider>

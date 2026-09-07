@@ -25,6 +25,7 @@
     "mongoose": "^9.5.0",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
-    "passport-local-mongoose": "^9.0.1"
+    "passport-local-mongoose": "^9.0.1",
+    "yahoo-finance2": "^4.0.2"
   }
 }

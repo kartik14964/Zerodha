@@ -11,35 +11,15 @@ const Apps = () => {
   ];
 
   return (
-    <div className="apps-interface" style={{ padding: "30px" }}>
-      <h3 className="title" style={{ marginBottom: "25px", fontSize: "20px" }}>External Apps</h3>
+    <div className="apps-interface">
+      <h3 className="title">External Apps</h3>
 
-      <div 
-        style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", 
-          gap: "25px" 
-        }}
-      >
+      <div className="apps-grid">
         {partnerApps.map((app, index) => (
-          <div 
-            key={index} 
-            className="app-item"
-            style={{
-              border: "1px solid #f1f1f1",
-              borderRadius: "4px",
-              padding: "20px",
-              textAlign: "center",
-              cursor: "pointer"
-            }}
-          >
-            <img 
-              src={app.img} 
-              alt={app.name} 
-              style={{ height: "35px", marginBottom: "12px",objectFit: "contain",width:"180px"}} 
-            />
-            <h5 style={{ margin: "5px 0", color: "#444" }}>{app.name}</h5>
-            <p style={{ fontSize: "11px", color: "#999" }}>{app.desc}</p>
+          <div key={index} className="app-item">
+            <img src={app.img} alt={app.name} />
+            <h5>{app.name}</h5>
+            <p>{app.desc}</p>
           </div>
         ))}
       </div>

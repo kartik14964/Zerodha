@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import "./Auth.css";
-import Swal from "sweetalert2";
+import toast from "react-hot-toast";
 
 const Signup = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -16,35 +16,21 @@ const Signup = () => {
     e.preventDefault();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email) || formData.password.length < 6) {
-      return Swal.fire(
-        "Oops!",
-        "Please enter a valid email address and a 6-character password.",
-        "warning",
-      );
+      toast.error("Please enter a valid email address and a 6-character password.");
+      return;
     }
 
     setLoading(true);
     try {
       const { email, password } = formData;
       const { data } = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/signup`, { email, password });
-      Swal.fire({
-        title: "Account Created!",
-        text: data.message || "You can now log in to start trading.",
-        icon: "success",
-        confirmButtonColor: "#387ed1",
-        confirmButtonText: "Go to Login",
-      }).then((result) => {
+      toast.success(data.message || "Account Created! You can now log in.");
+      setTimeout(() => {
         window.location.replace("/login");
-      });
+      }, 1500);
     } catch (err) {
       setLoading(false);
-      const serverMsg = err.response?.data?.message || "Signup failed.";
-      Swal.fire({
-        title: "Error",
-        text: serverMsg,
-        icon: "error",
-        confirmButtonColor: "#df514c",
-      });
+      toast.error(err.response?.data?.message || "Signup failed.");
     }
   };
 

@@ -2,6 +2,15 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
+const formatINR = (value) => {
+  return Number(value).toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
 const Orders = () => {
   const [allOrders, setAllOrders] = useState([]);
 
@@ -21,7 +30,7 @@ const Orders = () => {
       {allOrders.length === 0 ? (
         <div className="no-orders">
           <p>You haven't placed any orders today</p>
-          <Link to={"/"} className="btn">
+          <Link to={"/"} className="btn-primary-blue">
             Get started
           </Link>
         </div>
@@ -47,7 +56,7 @@ const Orders = () => {
                   <tr key={index}>
                     <td>{order.name}</td>
                     <td>{order.qty}</td>
-                    <td>{order.price.toFixed(2)}</td>
+                    <td>{formatINR(order.price)}</td>
                     <td className={modeClass}>
                       <strong>{order.mode}</strong>
                     </td>

@@ -1,11 +1,19 @@
 import React, { useState, useContext } from "react";
-import Swal from "sweetalert2";
+import toast from "react-hot-toast";
 import axios from "axios";
 
 import GeneralContext from "./GeneralContext";
 
 import "./BuyActionWindow.css";
 
+const formatINR = (value) => {
+  return Number(value).toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
 const BuyActionWindow = ({ stock }) => {
   const [stockQuantity, setStockQuantity] = useState(1);
   const [stockPrice, setStockPrice] = useState(stock.price);
@@ -13,11 +21,7 @@ const BuyActionWindow = ({ stock }) => {
 
   const handleBuyClick = async () => {
     if (stockQuantity <= 0 || stockPrice <= 0) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid Input",
-        text: "Enter valid quantity and price",
-      });
+      toast.error("Enter valid quantity and price");
       return;
     }
 
@@ -29,19 +33,10 @@ const BuyActionWindow = ({ stock }) => {
         mode: "BUY",
       });
 
-      Swal.fire({
-        icon: "success",
-        title: "Buy Successful",
-        text: response.data.message,
-      });
-
+      toast.success(response.data.message);
       closeWindow();
     } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Buy Failed",
-        text: error.response?.data || "Order failed",
-      });
+      toast.error(error.response?.data?.message || error.response?.data || "Order failed");
     }
   };
   const handleCancelClick = () => {
@@ -78,8 +73,8 @@ const BuyActionWindow = ({ stock }) => {
 
       <div className="buttons">
         <span>
-          Margin required ₹
-          {(Number(stockQuantity) * Number(stockPrice)).toFixed(2)}
+          Margin required{" "}
+          {formatINR(Number(stockQuantity) * Number(stockPrice))}
         </span>
         <div>
           <button className="btn btn-blue" onClick={handleBuyClick}>

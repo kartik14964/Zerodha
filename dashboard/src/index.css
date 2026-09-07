@@ -21,7 +21,7 @@ code {
 }
 
 .content {
-  flex-basis: 68%;
+  flex: 1;
   height: 100%;
   box-sizing: border-box;
   overflow-y: auto;
@@ -45,18 +45,21 @@ code {
 .btn {
   text-decoration: none;
   padding: 10px 20px;
-  border-radius: 2px;
+  border-radius: 4px;
   color: #fff;
-  margin-right: 2px;
-  margin-left: 2px;
+  margin-right: 5px;
+  margin-left: 5px;
+  cursor: pointer;
+  border: none;
+  outline: none;
 }
 
 .btn-green {
-  background: #4caf50;
+  background: #4caf50 !important;
 }
 
 .btn-blue {
-  background: #4184f3;
+  background: #4184f3 !important;
 }
 
 .row {
@@ -103,7 +106,7 @@ code {
   justify-content: space-between;
 }
 
-.table .data > * {
+.table .data>* {
   margin-bottom: 5%;
 }
 
@@ -165,16 +168,16 @@ code {
 }
 
 .order-table th {
-  text-align: right;
-  padding: 15px 10px;
+  text-align: right !important;
+  padding: 15px 15px;
   color: rgb(145, 145, 145);
-  font-weight: 300;
-  font-size: 0.8rem;
+  font-weight: 400;
+  font-size: 0.85rem;
 }
 
 .order-table tr th:first-child,
 .order-table tr td:first-child {
-  text-align: left;
+  text-align: left !important;
 }
 
 .order-table tr th:nth-child(1),
@@ -192,10 +195,10 @@ code {
 }
 
 .order-table td {
-  padding: 10px 10px;
-  text-align: right;
+  padding: 12px 15px;
+  text-align: right !important;
   font-weight: 400;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: rgb(73, 73, 73);
 }
 
@@ -364,7 +367,7 @@ hr {
   font-weight: 300;
 }
 
-.btn {
+.btn-primary-blue {
   text-decoration: none;
   background: rgb(77, 77, 248);
   padding: 10px 20px;
@@ -373,7 +376,7 @@ hr {
   margin-top: 2%;
 }
 
-.btn:hover {
+.btn-primary-blue:hover {
   background: rgb(110, 110, 253);
 }
 
@@ -395,16 +398,16 @@ hr {
 }
 
 .order-table th {
-  text-align: right;
-  padding: 15px 10px;
+  text-align: right !important;
+  padding: 15px 15px;
   color: rgb(145, 145, 145);
-  font-weight: 300;
-  font-size: 0.8rem;
+  font-weight: 400;
+  font-size: 0.85rem;
 }
 
 .order-table tr th:first-child,
 .order-table tr td:first-child {
-  text-align: left;
+  text-align: left !important;
 }
 
 .order-table tr td:first-child p {
@@ -420,10 +423,10 @@ hr {
 }
 
 .order-table td {
-  padding: 10px 10px;
-  text-align: right;
+  padding: 12px 15px;
+  text-align: right !important;
   font-weight: 400;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: rgb(73, 73, 73);
 }
 
@@ -577,7 +580,8 @@ hr {
 }
 
 .indices-container {
-  flex-basis: 32%;
+  width: 400px;
+  flex-shrink: 0;
   height: 100%;
   padding: 10px 20px;
   border-right: 1px solid rgb(224, 224, 224);
@@ -602,8 +606,8 @@ hr {
   justify-content: space-evenly;
 }
 
-.nifty > *,
-.sensex > * {
+.nifty>*,
+.sensex>* {
   margin-right: 8px;
 }
 
@@ -633,7 +637,8 @@ hr {
 }
 
 .watchlist-container {
-  flex-basis: 32%;
+  width: 400px;
+  flex-shrink: 0;
   height: 100%;
   box-sizing: border-box;
   box-shadow: 0px 0px 4px 1px rgb(236, 235, 235);
@@ -655,7 +660,9 @@ hr {
   padding: 15px 20px;
   font-size: 0.9rem;
   font-weight: 400;
-  color: rgb(241, 241, 241);
+  color: #333;
+  /* Fixed from white to dark */
+  background: transparent;
   border-bottom: 0.8px solid rgb(235, 234, 234);
 }
 
@@ -693,7 +700,7 @@ hr {
   align-items: center;
 }
 
-.item-info > * {
+.item-info>* {
   margin-right: 8px;
 }
 
@@ -805,6 +812,7 @@ hr {
 /* sudo selectors */
 .search:focus {
   outline: none;
+  border-bottom: 1px solid #ff5722;
 }
 
 .list li:hover {
@@ -812,9 +820,42 @@ hr {
   background-color: #f3f3f3;
 }
 
-.list li:hover > .actions {
+.list li:hover .item-info {
+  visibility: hidden;
+}
+
+.list li:hover>.actions {
   display: flex;
   cursor: move;
+}
+
+/* Animations for Live Price Ticks */
+@keyframes flashGreen {
+  0% {
+    background-color: rgba(76, 175, 80, 0.3);
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes flashRed {
+  0% {
+    background-color: rgba(223, 81, 76, 0.3);
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
+.flash-up {
+  animation: flashGreen 1s ease-out;
+}
+
+.flash-down {
+  animation: flashRed 1s ease-out;
 }
 
 /* TODO */
@@ -840,4 +881,173 @@ hr {
 
 .action:hover {
   background-color: rgb(212, 212, 212);
+}
+
+/* Apps Page Styles */
+.apps-interface {
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.apps-interface .title {
+  margin-bottom: 30px;
+  font-size: 22px;
+  color: #444;
+  font-weight: 400;
+}
+
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 30px;
+}
+
+.app-item {
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.app-item:hover {
+  border-color: #d3d3d3;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.app-item img {
+  height: 40px;
+  width: 160px;
+  object-fit: contain;
+  margin-bottom: 20px;
+}
+
+.app-item h5 {
+  margin: 10px 0 5px;
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.app-item p {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+}
+
+/* Funds Page Styles */
+.funds-interface {
+  padding: 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.funds-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 50px;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 20px;
+}
+
+.instant-text {
+  color: #666;
+  font-size: 14px;
+}
+
+.funds-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 60px;
+}
+
+.funds-title {
+  font-size: 20px;
+  font-weight: 400;
+  color: #444;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+}
+
+.funds-summary {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.margin-stats {
+  flex-grow: 1;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f5;
+  color: #666;
+  font-size: 14px;
+}
+
+.stat-row .val {
+  font-weight: 500;
+  color: #444;
+}
+
+.highlight-blue {
+  color: #4184f3 !important;
+  font-size: 24px !important;
+  font-weight: 400 !important;
+}
+
+.total-row {
+  background: #fcfcfc;
+  padding: 12px 0px;
+  margin-top: 10px;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+}
+
+.funds-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.commodity-banner {
+  background: #f9f9f9;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  padding: 40px 30px;
+  text-align: center;
+}
+
+.commodity-banner p {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+
+.btn-blue-outline {
+  color: #4184f3 !important;
+  border: 1px solid #4184f3 !important;
+  background: transparent !important;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.btn-blue-outline:hover {
+  background: #4184f3 !important;
+  color: #fff !important;
 }

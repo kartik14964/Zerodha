@@ -2,16 +2,19 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import BuyActionWindow from "./BuyActionWindow";
 import SellActionWindow from "./SellActionWindow";
+import ChartWindow from "./ChartWindow";
 
 const GeneralContext = React.createContext({
   openBuyWindow: (stock) => {},
   openSellWindow: (stock) => {},
+  openChartWindow: (stock) => {},
   closeWindow: () => {},
 });
 
 export const GeneralContextProvider = (props) => {
   const [isBuyWindowOpen, setIsBuyWindowOpen] = useState(false);
   const [isSellWindowOpen, setIsSellWindowOpen] = useState(false);
+  const [isChartWindowOpen, setIsChartWindowOpen] = useState(false);
   const [selectedStockUID, setSelectedStockUID] = useState(null);
   const [allHoldings, setAllHoldings] = useState([]);
 
@@ -32,9 +35,15 @@ export const GeneralContextProvider = (props) => {
     setSelectedStockUID(stock);
   };
 
+  const handleOpenChartWindow = (stock) => {
+    setIsChartWindowOpen(true);
+    setSelectedStockUID(stock);
+  };
+
   const handleCloseWindow = () => {
     setIsBuyWindowOpen(false);
     setIsSellWindowOpen(false);
+    setIsChartWindowOpen(false);
     setSelectedStockUID(null);
   };
 
@@ -43,6 +52,7 @@ export const GeneralContextProvider = (props) => {
       value={{
         openBuyWindow: handleOpenBuyWindow,
         openSellWindow: handleOpenSellWindow,
+        openChartWindow: handleOpenChartWindow,
         closeWindow: handleCloseWindow,
       }}
     >
@@ -53,6 +63,8 @@ export const GeneralContextProvider = (props) => {
       {isSellWindowOpen && (
         <SellActionWindow stock={selectedStockUID} holdings={allHoldings} />
       )}
+
+      {isChartWindowOpen && <ChartWindow stock={selectedStockUID} />}
     </GeneralContext.Provider>
   );
 };

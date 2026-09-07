@@ -1,27 +1,87 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Skeleton } from "@mui/material";
 import { VerticalGraph } from "./VerticalGraph";
-import { watchlist } from "../data/data"; 
+
+const formatINR = (value) => {
+  return Number(value).toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
 
 const Holdings = () => {
   const [allHoldings, setAllHoldings] = useState([]);
+  const [livePrices, setLivePrices] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`)
       .then((res) => {
         setAllHoldings(res.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (allHoldings.length === 0) return;
+    
+    // Format symbols for Yahoo Finance: 
+    // If it's a legacy stock (no special chars like . or - or ^), append .NS
+    // Otherwise, it's already a valid Yahoo ticker (e.g. BTC-USD, RELIANCE.NS, ^NSEI)
+    const getYahooSymbol = (name) => {
+      if (!name.includes(".") && !name.includes("-") && !name.startsWith("^")) {
+        return name + ".NS";
+      }
+      return name;
+    };
+
+    const symbols = allHoldings.map((h) => getYahooSymbol(h.name)).join(",");
+
+    const fetchPrices = async () => {
+      try {
+        const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/quotes?symbols=${symbols}`);
+        const priceMap = {};
+        data.forEach(q => {
+          // Map back to the original holding name for matching
+          // If q.name is "INFY.NS", but holding name is "INFY", we need to strip .NS
+          // But if holding name is "RELIANCE.NS", we should leave it.
+          // Safer: just use the exact name we sent, but the backend returns what Yahoo returns.
+          // Let's just find the matching holding.
+          const holding = allHoldings.find(h => getYahooSymbol(h.name) === q.name);
+          if (holding) {
+            priceMap[holding.name] = {
+              price: q.price,
+              percent: q.percent,
+              isDown: q.isDown
+            };
+          }
+        });
+        setLivePrices(priceMap);
+      } catch (err) {}
+    };
+
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 10000);
+    return () => clearInterval(interval);
+  }, [allHoldings]);
 
 
   const totalInvestment = allHoldings.reduce((sum, stock) => sum + (stock.avg * stock.qty), 0);
   
   const totalCurrentValue = allHoldings.reduce((sum, stock) => {
-    const marketPrice = watchlist.find((m) => m.name === stock.name)?.price || stock.price;
+    const marketPrice = livePrices[stock.name]?.price || stock.price;
     return sum + (marketPrice * stock.qty);
   }, 0);
 
   const totalPnL = totalCurrentValue - totalInvestment;
+  const totalProfitLossPercent = totalInvestment === 0 ? 0 : (totalPnL / totalInvestment) * 100;
   
 
   const labels = allHoldings.map((stock) => stock.name);
@@ -29,12 +89,17 @@ const Holdings = () => {
     labels,
     datasets: [
       {
-        label: "Stock Price",
+        label: "Investment Value",
+        data: allHoldings.map((stock) => stock.avg * stock.qty),
+        backgroundColor: "rgba(54, 162, 235, 0.7)",
+      },
+      {
+        label: "Current Value",
         data: allHoldings.map((stock) => {
-          const marketStock = watchlist.find((s) => s.name === stock.name);
-          return marketStock ? marketStock.price : stock.price;
+          const ltp = livePrices[stock.name]?.price || stock.price;
+          return ltp * stock.qty;
         }),
-        backgroundColor: "rgba(255, 99, 132, 0.5)",
+        backgroundColor: "rgba(76, 175, 80, 0.7)",
       },
     ],
   };
@@ -58,49 +123,79 @@ const Holdings = () => {
             </tr>
           </thead>
           <tbody>
-            {allHoldings.map((stock, index) => {
-              const marketStock = watchlist.find((s) => s.name === stock.name);
-              const ltp = marketStock ? marketStock.price : stock.price;
-              const curValue = ltp * stock.qty;
-              const investmentValue = stock.avg * stock.qty;
-              const profitLoss = curValue - investmentValue;
-              const netChg = ((ltp - stock.avg) / stock.avg) * 100;
-              const profClass = profitLoss >= 0 ? "profit" : "loss";
-              const dayClass = marketStock?.isDown ? "loss" : "profit";
-
-              return (
-                <tr key={index}>
-                  <td>{stock.name}</td>
-                  <td>{stock.qty}</td>
-                  <td>{stock.avg.toFixed(2)}</td>
-                  <td className={profClass}>{ltp.toFixed(2)}</td>
-                  <td>{curValue.toFixed(2)}</td>
-                  <td className={profClass}>{profitLoss.toFixed(2)}</td>
-                  <td className={profClass}>
-                    {netChg >= 0 ? "+" : ""}{netChg.toFixed(2)}%
-                  </td>
-                  <td className={dayClass}>
-                    {marketStock ? marketStock.percent : "0.00%"}
-                  </td>
+            {loading ? (
+              [1, 2, 3, 4].map((n) => (
+                <tr key={n}>
+                  <td><Skeleton variant="text" width={80} /></td>
+                  <td><Skeleton variant="text" width={30} /></td>
+                  <td><Skeleton variant="text" width={60} /></td>
+                  <td><Skeleton variant="text" width={60} /></td>
+                  <td><Skeleton variant="text" width={80} /></td>
+                  <td><Skeleton variant="text" width={60} /></td>
+                  <td><Skeleton variant="text" width={40} /></td>
+                  <td><Skeleton variant="text" width={40} /></td>
                 </tr>
-              );
-            })}
+              ))
+            ) : allHoldings.length === 0 ? (
+              <tr>
+                <td colSpan="8" style={{ textAlign: "center", padding: "30px" }}>
+                  <img src="https://support.zerodha.com/support-uploads/attachments/43048997530/inline/43085799982.png" alt="No Holdings" style={{ height: "120px", opacity: 0.5 }} />
+                  <p style={{ marginTop: "10px", color: "#666" }}>You don't have any stocks in your holdings yet.</p>
+                </td>
+              </tr>
+            ) : (
+              allHoldings.map((stock, index) => {
+                const liveData = livePrices[stock.name];
+                
+                const ltp = liveData?.price || stock.price;
+                const curValue = ltp * stock.qty;
+                const investmentValue = stock.avg * stock.qty;
+                const profitLoss = curValue - investmentValue;
+                const netChg = ((ltp - stock.avg) / stock.avg) * 100;
+                const profClass = profitLoss >= 0 ? "profit" : "loss";
+                
+                const isDown = liveData ? liveData.isDown : false;
+                const dayClass = isDown ? "loss" : "profit";
+                const percent = liveData?.percent || "0.00%";
+
+                return (
+                  <tr key={index}>
+                    <td>{stock.name}</td>
+                    <td>{stock.qty}</td>
+                    <td>{formatINR(stock.avg)}</td>
+                    <td className={profClass}>{formatINR(ltp)}</td>
+                    <td>{formatINR(curValue)}</td>
+                    <td className={profClass}>{formatINR(profitLoss)}</td>
+                    <td className={profClass}>
+                      {netChg >= 0 ? "+" : ""}{netChg.toFixed(2)}%
+                    </td>
+                    <td className={dayClass}>
+                      {percent}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="row">
         <div className="col">
-          <h5>{totalInvestment.toFixed(2)}</h5>
+          <h5>
+            {totalInvestment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h5>
           <p>Total investment</p>
         </div>
         <div className="col">
-          <h5>{totalCurrentValue.toFixed(2)}</h5>
+          <h5>
+            {formatINR(totalCurrentValue)}
+          </h5>
           <p>Current value</p>
         </div>
         <div className="col">
           <h5 className={totalPnL >= 0 ? "profit" : "loss"}>
-            {totalPnL.toFixed(2)}
+            {formatINR(totalPnL)} (+{totalProfitLossPercent.toFixed(2)}%)
           </h5>
           <p>P&L</p>
         </div>
@@ -111,4 +206,3 @@ const Holdings = () => {
 };
 
 export default Holdings;
- 
