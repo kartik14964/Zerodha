@@ -1,21 +1,16 @@
 const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance();
 
+const { getInitialQuotes } = require("../services/marketDataService");
+
 const getQuotes = async (req, res) => {
   try {
     const symbols = req.query.symbols;
     if (!symbols) return res.status(400).json({ error: "Missing symbols query parameter" });
     const symbolArray = symbols.split(",");
     
-    const quotes = await yahooFinance.quote(symbolArray);
-    const results = Array.isArray(quotes) ? quotes : [quotes];
-    
-    const formatted = results.map(q => ({
-      name: q.symbol,
-      price: q.regularMarketPrice,
-      percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
-      isDown: (q.regularMarketChangePercent || 0) < 0
-    }));
+    // Fetch multi-currency aware quotes from the central service
+    const formatted = await getInitialQuotes(symbolArray);
     
     res.json(formatted);
   } catch (err) {

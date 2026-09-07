@@ -271,7 +271,11 @@ const WatchListItem = ({ stock, removeStockFromWatchlist }) => {
           ) : (
             <KeyboardArrowUp className="up" />
           )}
-          <span className="price">{formatCurrency(stock.nativePrice || stock.price, stock.currency || 'INR')}</span>
+          <span className="price">
+            {stock.price === 0 
+              ? "..." 
+              : formatCurrency(stock.nativePrice || stock.price, stock.currency || 'INR')}
+          </span>
         </div>
       </div>
       <WatchlistActions stock={stock} removeStockFromWatchlist={removeStockFromWatchlist} />
