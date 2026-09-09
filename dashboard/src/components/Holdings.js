@@ -17,9 +17,9 @@ const Holdings = () => {
   const [loading, setLoading] = useState(true);
   const socket = useSocket();
   const { refreshFlag } = useContext(GeneralContext);
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`, {
       headers: { Authorization: `Bearer ${token}` },
     })
