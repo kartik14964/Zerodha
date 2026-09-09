@@ -18,6 +18,7 @@ const Summary = () => {
   const [userEmail, setUserEmail] = useState("");
   const [walletBalance, setWalletBalance] = useState(100000);
   const [livePrices, setLivePrices] = useState({});
+  const [valuation, setValuation] = useState({ totalInvestmentINR: 0, currentValueINR: 0, totalPnLINR: 0 });
   const { refreshFlag } = useContext(GeneralContext);
 
   useEffect(() => {
@@ -37,6 +38,13 @@ const Summary = () => {
           setWalletBalance(res.data.user.balance);
         }
       })
+      .catch((err) => console.log(err));
+
+    axios
+      .get(`${process.env.REACT_APP_BACKEND_URL}/valuation`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setValuation(res.data.holdings))
       .catch((err) => console.log(err));
   }, [refreshFlag]);
 
@@ -73,24 +81,28 @@ const Summary = () => {
     const interval = setInterval(fetchPrices, 10000);
     return () => clearInterval(interval);
   }, [holdings]);
+
+  // Also refresh valuation periodically
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const fetchValuation = () => {
+      axios
+        .get(`${process.env.REACT_APP_BACKEND_URL}/valuation`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => setValuation(res.data.holdings))
+        .catch((err) => {});
+    };
+    const interval = setInterval(fetchValuation, 10000);
+    return () => clearInterval(interval);
+  }, []);
   const rawName = userEmail ? userEmail.split("@")[0] : "User";
   const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
-  let totalInvestment = 0;
-  let totalCurrentValue = 0;
-
-  // Loop through database stocks one by one
-  holdings.forEach((stock) => {
-    // Find the live price from our Yahoo fetch or fallback
-    const livePrice = livePrices[stock.name] || stock.price;
-
-    // Add to our totals
-    totalInvestment = totalInvestment + stock.avg * stock.qty;
-    totalCurrentValue = totalCurrentValue + livePrice * stock.qty;
-  });
-
-  // Calculate final numbers
-  const totalPnL = totalCurrentValue - totalInvestment;
+  const totalInvestment = valuation.totalInvestmentINR || 0;
+  const totalCurrentValue = valuation.currentValueINR || 0;
+  const totalPnL = valuation.totalPnLINR || 0;
   const isProfit = totalPnL >= 0;
 
   // Wallet numbers

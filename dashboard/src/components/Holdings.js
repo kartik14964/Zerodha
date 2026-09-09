@@ -13,12 +13,16 @@ const formatINR = (value) => formatCurrency(value, "INR");
 const Holdings = () => {
   const [allHoldings, setAllHoldings] = useState([]);
   const [livePrices, setLivePrices] = useState({});
+  const [valuation, setValuation] = useState({ totalInvestmentINR: 0, currentValueINR: 0, totalPnLINR: 0, pnlPercentage: 0 });
   const [loading, setLoading] = useState(true);
   const socket = useSocket();
   const { refreshFlag } = useContext(GeneralContext);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`)
+    axios.get(`${process.env.REACT_APP_BACKEND_URL}/allHoldings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => {
         setAllHoldings(res.data);
         setLoading(false);
@@ -27,6 +31,18 @@ const Holdings = () => {
         console.error(err);
         setLoading(false);
       });
+
+    const fetchValuation = () => {
+      axios
+        .get(`${process.env.REACT_APP_BACKEND_URL}/valuation`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => setValuation(res.data.holdings))
+        .catch((err) => {});
+    };
+    fetchValuation();
+    const interval = setInterval(fetchValuation, 10000);
+    return () => clearInterval(interval);
   }, [refreshFlag]);
 
   useEffect(() => {
@@ -91,15 +107,10 @@ const Holdings = () => {
   }, [allHoldings, socket]);
 
 
-  const totalInvestment = allHoldings.reduce((sum, stock) => sum + (stock.avg * stock.qty), 0);
-  
-  const totalCurrentValue = allHoldings.reduce((sum, stock) => {
-    const marketPrice = livePrices[stock.name]?.price || stock.price;
-    return sum + (marketPrice * stock.qty);
-  }, 0);
-
-  const totalPnL = totalCurrentValue - totalInvestment;
-  const totalProfitLossPercent = totalInvestment === 0 ? 0 : (totalPnL / totalInvestment) * 100;
+  const totalInvestment = valuation.totalInvestmentINR || 0;
+  const totalCurrentValue = valuation.currentValueINR || 0;
+  const totalPnL = valuation.totalPnLINR || 0;
+  const totalProfitLossPercent = valuation.pnlPercentage || 0;
   
 
   const labels = allHoldings.map((stock) => stock.name);
