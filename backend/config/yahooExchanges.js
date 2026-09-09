@@ -25,11 +25,31 @@ const YAHOO_EXCHANGE_MAP = {
 
   // EUROPE
   "GER": { market: MARKETS.EUROPE, exchange: "XETR",     tvPrefix: "XETR" },
+  "FRA": { market: MARKETS.EUROPE, exchange: "FRA",      tvPrefix: "FRA" },
   "EBS": { market: MARKETS.EUROPE, exchange: "SIX",      tvPrefix: "SIX" },
   "PAR": { market: MARKETS.EUROPE, exchange: "EURONEXT", tvPrefix: "EURONEXT" },
   "AMS": { market: MARKETS.EUROPE, exchange: "EURONEXT", tvPrefix: "EURONEXT" },
   "MIL": { market: MARKETS.EUROPE, exchange: "MIL",      tvPrefix: "MIL" },
   "MCE": { market: MARKETS.EUROPE, exchange: "BME",      tvPrefix: "BME" },
+
+  // AUSTRALIA
+  "ASX": { market: MARKETS.AUSTRALIA, exchange: "ASX", tvPrefix: "ASX" },
+  "CXA": { market: MARKETS.AUSTRALIA, exchange: "CXA", tvPrefix: "ASX" },
+
+  // CANADA
+  "TOR": { market: MARKETS.CANADA, exchange: "TSX", tvPrefix: "TSX" },
+  "VAN": { market: MARKETS.CANADA, exchange: "TSXV", tvPrefix: "TSXV" },
+  "CNQ": { market: MARKETS.CANADA, exchange: "CSE", tvPrefix: "CSE" },
+  "NEO": { market: MARKETS.CANADA, exchange: "NEO", tvPrefix: "NEO" },
+
+  // OTC
+  "PNK": { market: MARKETS.OTC, exchange: "OTC", tvPrefix: "OTC" },
+  "OQB": { market: MARKETS.OTC, exchange: "OTC", tvPrefix: "OTC" },
+
+  // CHINA
+  "HKG": { market: MARKETS.CHINA, exchange: "HKEX", tvPrefix: "HKEX" },
+  "SHG": { market: MARKETS.CHINA, exchange: "SSE", tvPrefix: "SSE" },
+  "SHZ": { market: MARKETS.CHINA, exchange: "SZSE", tvPrefix: "SZSE" },
 
   // CRYPTO
   "CCC": { market: MARKETS.CRYPTO, exchange: "CCC", tvPrefix: "CRYPTO" },
@@ -48,6 +68,14 @@ const SUFFIX_TO_TV = {
   ".AS": "EURONEXT",
   ".MI": "MIL",
   ".MC": "BME",
+  ".AX": "ASX",
+  ".F":  "FRA",
+  ".V":  "TSXV",
+  ".TO": "TSX",
+  ".CN": "CSE",
+  ".NE": "NEO",
+  ".SS": "SSE",
+  ".SZ": "SZSE",
 };
 
 /**

@@ -35,6 +35,30 @@ const MARKETS = {
     currency: "USD",
     timezone: "UTC",
   },
+  AUSTRALIA: {
+    name: "AUSTRALIA",
+    exchanges: ["ASX", "CXA"],
+    currency: "AUD",
+    timezone: "Australia/Sydney",
+  },
+  CANADA: {
+    name: "CANADA",
+    exchanges: ["TOR", "VAN", "CNQ", "NEO"],
+    currency: "CAD",
+    timezone: "America/Toronto",
+  },
+  OTC: {
+    name: "OTC",
+    exchanges: ["PNK", "OQB"],
+    currency: "USD",
+    timezone: "America/New_York",
+  },
+  CHINA: {
+    name: "CHINA",
+    exchanges: ["HKG", "SHG", "SHZ"],
+    currency: "HKD",
+    timezone: "Asia/Hong_Kong",
+  },
 };
 
 module.exports = { MARKETS };
