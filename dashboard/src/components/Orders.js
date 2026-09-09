@@ -2,14 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
-const formatINR = (value) => {
-  return Number(value).toLocaleString('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-};
+import { formatCurrency } from "../utils/currencyFormatter";
+
+const formatINR = (value) => formatCurrency(value, "INR");
 
 const Orders = () => {
   const [allOrders, setAllOrders] = useState([]);
@@ -44,6 +39,7 @@ const Orders = () => {
                 <th>Instrument</th>
                 <th>Qty.</th>
                 <th>Avg. Price</th>
+                <th>Total Value</th>
                 <th>Type</th>
               </tr>
             </thead>
@@ -54,9 +50,20 @@ const Orders = () => {
 
                 return (
                   <tr key={index}>
-                    <td>{order.name}</td>
+                    <td>
+                      <div>{order.name}</div>
+                      {order.exchange && <small style={{color: '#888'}}>{order.exchange} · {order.currency}</small>}
+                    </td>
                     <td>{order.qty}</td>
-                    <td>{formatINR(order.price)}</td>
+                    <td>{formatCurrency(order.orderPrice || order.price, order.currency)}</td>
+                    <td>
+                      {formatCurrency(order.totalTransactionValueNative || (order.qty * (order.orderPrice || order.price)), order.currency)}
+                      {order.currency !== "INR" && order.totalTransactionValueINR && (
+                        <div style={{ fontSize: "0.8em", color: "#666" }}>
+                          ({formatINR(order.totalTransactionValueINR)})
+                        </div>
+                      )}
+                    </td>
                     <td className={modeClass}>
                       <strong>{order.mode}</strong>
                     </td>

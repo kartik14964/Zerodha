@@ -6,14 +6,9 @@ import { VerticalGraph } from "./VerticalGraph";
 import GeneralContext from "./GeneralContext";
 import { useContext } from "react";
 
-const formatINR = (value) => {
-  return Number(value).toLocaleString('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-};
+import { formatCurrency } from "../utils/currencyFormatter";
+
+const formatINR = (value) => formatCurrency(value, "INR");
 
 const Holdings = () => {
   const [allHoldings, setAllHoldings] = useState([]);
@@ -36,28 +31,22 @@ const Holdings = () => {
 
   useEffect(() => {
     if (allHoldings.length === 0) return;
-    
-    // Format symbols for Yahoo Finance: 
-    // If it's a legacy stock (no special chars like . or - or ^), append .NS
-    // Otherwise, it's already a valid Yahoo ticker (e.g. BTC-USD, RELIANCE.NS, ^NSEI)
-    const getYahooSymbol = (name) => {
-      if (!name.includes(".") && !name.includes("-") && !name.startsWith("^")) {
-        return name + ".NS";
-      }
-      return name;
-    };
+    // Use the canonical symbol directly from DB, fallback only if missing
+    const getYahooSymbol = (h) => h.symbol || h.name;
 
-    const symbols = allHoldings.map((h) => getYahooSymbol(h.name)).join(",");
+    const symbols = allHoldings.map(getYahooSymbol).join(",");
 
     const fetchPrices = async () => {
       try {
         const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/quotes?symbols=${symbols}`);
         const priceMap = {};
         data.forEach(q => {
-          const holding = allHoldings.find(h => getYahooSymbol(h.name) === q.name);
+          const holding = allHoldings.find(h => getYahooSymbol(h) === q.name || h.name === q.name);
           if (holding) {
             priceMap[holding.name] = {
               price: q.price,
+              nativePrice: q.nativePrice,
+              currency: q.currency,
               percent: q.percent,
               isDown: q.isDown
             };
@@ -70,17 +59,19 @@ const Holdings = () => {
     fetchPrices();
 
     if (socket) {
-      const symbolArray = allHoldings.map((h) => getYahooSymbol(h.name));
+      const symbolArray = allHoldings.map(getYahooSymbol);
       socket.emit("subscribe", symbolArray);
 
       const handlePriceUpdate = (q) => {
         setLivePrices((prev) => {
-          const holding = allHoldings.find(h => getYahooSymbol(h.name) === q.name);
+          const holding = allHoldings.find(h => getYahooSymbol(h) === q.name || h.name === q.name);
           if (holding) {
             return {
               ...prev,
               [holding.name]: {
                 price: q.price,
+                nativePrice: q.nativePrice,
+                currency: q.currency,
                 percent: q.percent,
                 isDown: q.isDown
               }
@@ -112,6 +103,8 @@ const Holdings = () => {
   
 
   const labels = allHoldings.map((stock) => stock.name);
+  // NOTE: This simple approximation uses native numbers for the chart.
+  // In a real multi-currency dashboard, the chart should use the portfolio valuation service.
   const data = {
     labels,
     datasets: [
@@ -184,15 +177,21 @@ const Holdings = () => {
                 const isDown = liveData ? liveData.isDown : false;
                 const dayClass = isDown ? "loss" : "profit";
                 const percent = liveData?.percent || "0.00%";
+                
+                const nativePrice = liveData?.nativePrice;
+                const currency = liveData?.currency || "INR";
 
                 return (
                   <tr key={index}>
-                    <td>{stock.name}</td>
+                    <td>
+                      <div>{stock.name}</div>
+                      {stock.exchange && <small style={{color: '#888'}}>{stock.exchange} · {stock.currency}</small>}
+                    </td>
                     <td>{stock.qty}</td>
-                    <td>{formatINR(stock.avg)}</td>
-                    <td className={profClass}>{formatINR(ltp)}</td>
-                    <td>{formatINR(curValue)}</td>
-                    <td className={profClass}>{formatINR(profitLoss)}</td>
+                    <td>{formatCurrency(stock.avg, currency)}</td>
+                    <td className={profClass}>{formatCurrency(ltp, currency)}</td>
+                    <td>{formatCurrency(curValue, currency)}</td>
+                    <td className={profClass}>{formatCurrency(profitLoss, currency)}</td>
                     <td className={profClass}>
                       {netChg >= 0 ? "+" : ""}{netChg.toFixed(2)}%
                     </td>
@@ -222,7 +221,7 @@ const Holdings = () => {
         </div>
         <div className="col">
           <h5 className={totalPnL >= 0 ? "profit" : "loss"}>
-            {formatINR(totalPnL)} (+{totalProfitLossPercent.toFixed(2)}%)
+            {formatINR(totalPnL)} ({totalProfitLossPercent >= 0 ? "+" : ""}{totalProfitLossPercent.toFixed(2)}%)
           </h5>
           <p>P&L</p>
         </div>

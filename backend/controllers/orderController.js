@@ -3,26 +3,49 @@ const { UserModel } = require("../model/UserModel");
 const { HoldingsModel } = require("../model/HoldingsModel");
 const { PositionsModel } = require("../model/PositionsModel");
 const { OrdersModel } = require("../model/OrdersModel");
-const { cache } = require("../services/marketDataService");
+const { cache, getInitialQuotes } = require("../services/marketDataService");
+const { getRateToINR } = require("../services/fxService");
 
 const placeOrder = async (req, res) => {
-  const { name, symbol, qty, mode, idempotencyKey } = req.body;
+  const { name, symbol, exchange, market, currency, qty, mode, idempotencyKey } = req.body;
 
   if (!idempotencyKey) {
     return res.status(400).json({ message: "Idempotency key is required." });
   }
 
   const lookupKey = symbol || name;
-  const cachedStock = cache.get(lookupKey);
+  let cachedStock = cache.get(lookupKey);
+
+  // Cache miss: do a live one-time fetch rather than rejecting the order outright
   if (!cachedStock) {
-    return res.status(400).json({ message: "Market data unavailable. Cannot price order safely." });
+    try {
+      const freshData = await getInitialQuotes([lookupKey]);
+      cachedStock = freshData[0] || null;
+    } catch (fetchErr) {
+      console.warn("Live price fetch failed for", lookupKey, fetchErr.message);
+    }
+  }
+
+  if (!cachedStock) {
+    return res.status(400).json({ message: "Market data unavailable. Cannot price order safely. Please wait a moment and try again." });
   }
 
   const orderQty = Number(qty);
-  // Security Fix: Never trust client price. Use authoritative server-side cached INR price.
+  // Security Fix: Never trust client price. Use authoritative server-side cached NATIVE price.
   const orderPrice = Number(cachedStock.price);
-  const totalTransactionValue = orderQty * orderPrice;
+  const nativeTransactionValue = orderQty * orderPrice;
+  const currencyCode = currency || cachedStock.currency || "INR";
   const userId = req.user._id;
+
+  // Resolve dynamic FX rate
+  let fxRateToINR = 1;
+  try {
+    fxRateToINR = await getRateToINR(currencyCode);
+  } catch (fxErr) {
+    return res.status(503).json({ message: "FX Conversion Service unavailable. Cannot price order safely." });
+  }
+
+  const totalTransactionValueINR = nativeTransactionValue * fxRateToINR;
 
   // Initial fast check for existing order (Idempotency)
   const existingOrderCheck = await OrdersModel.findOne({ user: userId, idempotencyKey });
@@ -46,19 +69,19 @@ const placeOrder = async (req, res) => {
 
       // BUY LOGIC
       if (mode === "BUY") {
-        if (user.balance < totalTransactionValue) {
+        if (user.balance < totalTransactionValueINR) {
           throw new Error("INSUFFICIENT_FUNDS");
         }
 
-        user.balance -= totalTransactionValue;
+        user.balance -= totalTransactionValueINR;
         await user.save({ session });
 
         const existingHolding = await HoldingsModel.findOne({ name, user: userId }).session(session);
 
         if (existingHolding) {
-          const totalOldValue = existingHolding.qty * existingHolding.avg;
-          const totalNewValue = orderQty * orderPrice;
-          const newAvg = Number(((totalOldValue + totalNewValue) / (existingHolding.qty + orderQty)).toFixed(2));
+          // Average price remains in NATIVE currency!
+          const totalOldValueNative = existingHolding.qty * existingHolding.avg;
+          const newAvg = Number(((totalOldValueNative + nativeTransactionValue) / (existingHolding.qty + orderQty)).toFixed(4));
           existingHolding.qty += orderQty;
           existingHolding.avg = newAvg;
           existingHolding.price = orderPrice;
@@ -67,6 +90,10 @@ const placeOrder = async (req, res) => {
           await new HoldingsModel({
             user: userId,
             name,
+            symbol: symbol || name,
+            exchange: exchange || "",
+            market: market || "",
+            currency: currency || "INR",
             qty: orderQty,
             avg: orderPrice,
             price: orderPrice,
@@ -83,6 +110,10 @@ const placeOrder = async (req, res) => {
           await new PositionsModel({
             user: userId,
             name,
+            symbol: symbol || name,
+            exchange: exchange || "",
+            market: market || "",
+            currency: currency || "INR",
             qty: orderQty,
             avg: orderPrice,
             price: orderPrice,
@@ -102,7 +133,9 @@ const placeOrder = async (req, res) => {
         if (existingHolding.qty < orderQty) {
           throw new Error("INSUFFICIENT_QTY");
         }
-        user.balance += totalTransactionValue;
+        
+        // Sell credits INR equivalent
+        user.balance += totalTransactionValueINR;
         await user.save({ session });
 
         if (existingHolding.qty === orderQty) {
@@ -124,12 +157,20 @@ const placeOrder = async (req, res) => {
         }
       }
 
-      // SAVE ORDER
+      // SAVE ORDER WITH EXACT FX AT TRANSACTION TIME
       await new OrdersModel({
         user: userId,
         name,
+        symbol: symbol || name,
+        exchange: exchange || "",
+        market: market || "",
+        currency: currencyCode,
         qty: orderQty,
-        price: orderPrice,
+        price: orderPrice, // Legacy alias
+        orderPrice: orderPrice,
+        totalTransactionValueNative: nativeTransactionValue,
+        fxRateToINR: fxRateToINR,
+        totalTransactionValueINR: totalTransactionValueINR,
         mode,
         idempotencyKey
       }).save({ session });

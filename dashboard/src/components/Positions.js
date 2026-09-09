@@ -5,14 +5,9 @@ import { useContext } from "react";
 import axios from "axios";
 import { Skeleton } from "@mui/material";
 
-const formatINR = (value) => {
-  return Number(value).toLocaleString('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-};
+import { formatCurrency } from "../utils/currencyFormatter";
+
+const formatINR = (value) => formatCurrency(value, "INR");
 
 const Positions = () => {
   const [allPositions, setAllPositions] = useState([]);
@@ -37,24 +32,21 @@ const Positions = () => {
   useEffect(() => {
     if (allPositions.length === 0) return;
     
-    const getYahooSymbol = (name) => {
-      if (!name.includes(".") && !name.includes("-") && !name.startsWith("^")) {
-        return name + ".NS";
-      }
-      return name;
-    };
+    const getYahooSymbol = (p) => p.symbol || p.name;
 
-    const symbols = allPositions.map((p) => getYahooSymbol(p.name)).join(",");
+    const symbols = allPositions.map(getYahooSymbol).join(",");
 
     const fetchPrices = async () => {
       try {
         const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/quotes?symbols=${symbols}`);
         const priceMap = {};
         data.forEach(q => {
-          const position = allPositions.find(p => getYahooSymbol(p.name) === q.name);
+          const position = allPositions.find(p => getYahooSymbol(p) === q.name || p.name === q.name);
           if (position) {
             priceMap[position.name] = {
               price: q.price,
+              nativePrice: q.nativePrice,
+              currency: q.currency,
               percent: q.percent,
               isDown: q.isDown
             };
@@ -67,17 +59,19 @@ const Positions = () => {
     fetchPrices();
 
     if (socket) {
-      const symbolArray = allPositions.map((p) => getYahooSymbol(p.name));
+      const symbolArray = allPositions.map(getYahooSymbol);
       socket.emit("subscribe", symbolArray);
 
       const handlePriceUpdate = (q) => {
         setLivePrices((prev) => {
-          const position = allPositions.find(p => getYahooSymbol(p.name) === q.name);
+          const position = allPositions.find(p => getYahooSymbol(p) === q.name || p.name === q.name);
           if (position) {
             return {
               ...prev,
               [position.name]: {
                 price: q.price,
+                nativePrice: q.nativePrice,
+                currency: q.currency,
                 percent: q.percent,
                 isDown: q.isDown
               }
@@ -144,17 +138,24 @@ const Positions = () => {
               const pnlPercent = avg > 0 ? ((ltp - avg) / avg) * 100 : 0;
 
               const profClass = profitLoss >= 0 ? "profit" : "loss";
+              const nativePrice = liveData?.nativePrice;
+              const currency = liveData?.currency || "INR";
               
               return (
                 <tr key={index}>
                   <td>{stock.product || "CNC"}</td>
-                  <td>{stock.name}</td>
+                  <td>
+                    <div>{stock.name}</div>
+                    {stock.exchange && <small style={{color: '#888'}}>{stock.exchange} · {stock.currency}</small>}
+                  </td>
                   <td>{stock.qty}</td>
-                  <td>{formatINR(avg)}</td>
+                  <td>{formatCurrency(avg, currency)}</td>
 
-                  <td className={profClass}>{formatINR(ltp)}</td>
+                  <td className={profClass}>
+                    {formatCurrency(ltp, currency)}
+                  </td>
 
-                  <td className={profClass}>{formatINR(profitLoss)}</td>
+                  <td className={profClass}>{formatCurrency(profitLoss, currency)}</td>
 
                   <td className={profClass}>
                     {pnlPercent >= 0 ? "+" : ""}

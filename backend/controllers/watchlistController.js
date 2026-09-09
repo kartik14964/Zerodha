@@ -2,7 +2,7 @@ const { WatchlistModel } = require("../model/WatchlistModel");
 
 const getWatchlist = async (req, res) => {
   try {
-    const watchlist = await WatchlistModel.find({ user: req.user._id });
+    const watchlist = await WatchlistModel.find({ user: req.user._id }).sort({ _id: -1 });
     res.json(watchlist);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch watchlist" });

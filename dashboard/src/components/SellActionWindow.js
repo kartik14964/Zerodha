@@ -45,6 +45,9 @@ const SellActionWindow = ({ stock, holdings }) => {
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/newOrder`, {
         name: stock.name,
         symbol: stock.symbol || stock.name,
+        exchange: stock.exchange,
+        market: stock.market,
+        currency: stock.currency,
         qty: Number(stockQuantity),
         price: executionPriceInr,
         mode: "SELL",

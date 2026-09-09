@@ -708,6 +708,8 @@ hr {
 
 .list {
   list-style-type: none;
+  padding: 0;
+  margin: 0;
   padding-bottom: 12%;
 }
 
@@ -719,7 +721,7 @@ hr {
 
 .item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   font-weight: 300;
   font-size: 0.8rem;
@@ -732,6 +734,7 @@ hr {
   align-items: center;
   gap: 12px;
   min-width: 170px;
+  padding-top: 2px;
 }
 
 .item-info>* {

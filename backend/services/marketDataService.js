@@ -25,8 +25,8 @@ let cooldownUntil = 0;
 
 const initMarketDataService = (io) => {
   ioRef = io;
-  // Poll Yahoo Finance every 30 seconds
-  setInterval(fetchAndBroadcast, 30000);
+  // Poll Yahoo Finance every 5 seconds (minimum safe interval)
+  setInterval(fetchAndBroadcast, 5000);
 };
 
 // ---------------------------------------------------------------------------
