@@ -35,11 +35,11 @@ let ioRef = null;
 // ---------------------------------------------------------------------------
 const warmupYahooFinance = async (attempt = 1) => {
   try {
-    await yahooFinance.quoteCombine(["INR=X"]);
+    await yahooFinance.quote("INR=X");
     console.log("✅ Yahoo Finance warmed up successfully.");
   } catch (err) {
     if (attempt <= 8) {
-      const delay = Math.min(5000 * attempt, 30000); // 5s, 10s, 15s … max 30s
+      const delay = Math.min(5000 * attempt, 30000);
       console.warn(
         `⚠️  Yahoo Finance warmup failed (attempt ${attempt}/8), retrying in ${delay / 1000}s — ${err.message}`
       );
@@ -56,7 +56,7 @@ const initMarketDataService = (io) => {
   ioRef = io;
   // Kick off warmup immediately on startup
   warmupYahooFinance();
-  // Poll every 5s — same as original; browser headers make this safe on Render
+  // Poll every 5s — browser headers reduce rate-limit risk on Render
   setInterval(fetchAndBroadcast, 5000);
 };
 
@@ -83,8 +83,7 @@ const removeSymbols = (symbols) => {
 };
 
 // ---------------------------------------------------------------------------
-// Helper: fetch a batch of symbols using quoteCombine (handles partial failures
-// better than quote()) and update the in-memory cache + FX rate.
+// Helper: fetch a batch of symbols using quote() and update cache + FX rate.
 // ---------------------------------------------------------------------------
 const fetchBatch = async (symbolsToFetch) => {
   // Always include INR=X so we have a live FX rate
@@ -92,21 +91,20 @@ const fetchBatch = async (symbolsToFetch) => {
     ? symbolsToFetch
     : [...symbolsToFetch, "INR=X"];
 
-  // quoteCombine returns a Record<symbol, QuoteResult> and gracefully handles
-  // symbols that fail individually without aborting the whole batch.
-  const resultsMap = await yahooFinance.quoteCombine(batch);
+  const quotes = await yahooFinance.quote(batch);
+  const results = Array.isArray(quotes) ? quotes : [quotes];
 
   // 1. Update FX rate
-  const fxResult = resultsMap["INR=X"];
-  if (fxResult && fxResult.regularMarketPrice) {
-    USD_TO_INR_RATE = fxResult.regularMarketPrice;
+  const fxQuote = results.find((q) => q.symbol === "INR=X");
+  if (fxQuote && fxQuote.regularMarketPrice) {
+    USD_TO_INR_RATE = fxQuote.regularMarketPrice;
   }
 
   // 2. Process each symbol
   const formatted = [];
-  for (const [symbol, q] of Object.entries(resultsMap)) {
-    if (symbol === "INR=X") continue;
-    if (!q || !q.regularMarketPrice) continue; // skip if Yahoo returned no price
+  results.forEach((q) => {
+    if (q.symbol === "INR=X") return;
+    if (!q.regularMarketPrice) return;
 
     let finalPrice = q.regularMarketPrice;
     if (q.currency === "USD") {
@@ -114,7 +112,7 @@ const fetchBatch = async (symbolsToFetch) => {
     }
 
     const entry = {
-      name: symbol,
+      name: q.symbol,
       price: finalPrice,
       nativePrice: q.regularMarketPrice,
       currency: q.currency || "INR",
@@ -122,9 +120,9 @@ const fetchBatch = async (symbolsToFetch) => {
       isDown: (q.regularMarketChangePercent || 0) < 0,
     };
 
-    cache.set(symbol, entry);
+    cache.set(q.symbol, entry);
     formatted.push(entry);
-  }
+  });
 
   return formatted;
 };
@@ -139,7 +137,6 @@ const fetchAndBroadcast = async () => {
 
   try {
     const results = await fetchBatch(symbolsToFetch);
-
     results.forEach((entry) => {
       if (ioRef) {
         ioRef.to(`stock:${entry.name}`).emit("price_update", entry);
@@ -147,7 +144,6 @@ const fetchAndBroadcast = async () => {
     });
   } catch (err) {
     // On failure (e.g. 429) the cache retains the last known state.
-    // Clients will see unchanged prices until the next successful poll.
     console.error("Market Data Fetch Error (cache retained):", err.message);
   }
 };
@@ -166,7 +162,6 @@ const getInitialQuotes = async (symbols) => {
       await fetchBatch(missing);
     } catch (err) {
       console.error("Error fetching initial quotes:", err.message);
-      // Cache may be partially populated; return what we have
     }
   }
 
