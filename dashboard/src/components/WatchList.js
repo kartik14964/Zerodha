@@ -329,6 +329,10 @@ const WatchListItem = ({ stock, removeStockFromWatchlist, isActive, onToggle }) 
               {stock.exchange}
               {stock.marketStatus === "OPEN" ? (
                 <span style={{ color: "#4CAF50", fontWeight: 600 }}>● Open</span>
+              ) : stock.marketStatus === "PRE" ? (
+                <span style={{ color: "#FF9800", fontWeight: 600 }}>● Pre</span>
+              ) : stock.marketStatus === "POST" ? (
+                <span style={{ color: "#FF9800", fontWeight: 600 }}>● Post</span>
               ) : stock.marketStatus === "CLOSED" ? (
                 <span style={{ color: "#f44336", fontWeight: 600 }}>● Closed</span>
               ) : null}

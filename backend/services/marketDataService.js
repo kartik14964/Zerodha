@@ -1,6 +1,5 @@
 const YahooFinance = require("yahoo-finance2").default;
 const { normalizeYahooExchange } = require("../config/yahooExchanges");
-const { getMarketStatus } = require("./marketStatusService");
 
 // Configure yahoo-finance2 with a realistic browser User-Agent.
 const yahooFinance = new YahooFinance({
@@ -26,7 +25,7 @@ let cooldownUntil = 0;
 
 const initMarketDataService = (io) => {
   ioRef = io;
-  // Poll Yahoo Finance every 30 seconds (reduced from 5s to protect against 429s)
+  // Poll Yahoo Finance every 30 seconds
   setInterval(fetchAndBroadcast, 30000);
 };
 
@@ -53,20 +52,31 @@ const removeSymbols = (symbols) => {
 };
 
 // ---------------------------------------------------------------------------
-// Helper: fetch a batch of symbols and update the in-memory cache.
-// Prices are stored in NATIVE currency (no forced INR conversion).
-// Market status is computed locally per exchange — no extra Yahoo request needed.
+// Helper: convert Yahoo's marketState to a simple display status.
+// Yahoo returns: REGULAR (open), PRE (pre-market), POST (post-market), CLOSED
+// This is more accurate than local clock — Yahoo handles holidays, DST,
+// and Japan's lunch break automatically.
+// ---------------------------------------------------------------------------
+const resolveMarketStatus = (marketState) => {
+  if (!marketState) return "UNKNOWN";
+  if (marketState === "REGULAR") return "OPEN";
+  if (marketState === "PRE") return "PRE";
+  if (marketState === "POST") return "POST";
+  return "CLOSED";
+};
+
+// ---------------------------------------------------------------------------
+// Fetch a batch of symbols and update the in-memory cache.
+// Prices are stored in NATIVE currency (no forced INR conversion here).
 // ---------------------------------------------------------------------------
 const fetchBatch = async (symbolsToFetch) => {
   if (symbolsToFetch.length === 0) return [];
 
-  // Cooldown check: if Yahoo returned 429, serve from cache
   if (Date.now() < cooldownUntil) {
     console.log("Yahoo Finance in cooldown. Serving from cache.");
     return symbolsToFetch.map(s => cache.get(s)).filter(Boolean);
   }
 
-  // Deduplicate
   const uniqueSymbols = [...new Set(symbolsToFetch)];
 
   try {
@@ -77,23 +87,22 @@ const fetchBatch = async (symbolsToFetch) => {
     results.forEach((q) => {
       if (!q.regularMarketPrice) return;
 
-      // Determine exchange and market from Yahoo's exchange code
       const exchangeMapping = normalizeYahooExchange(q.exchange);
       const exchange = exchangeMapping ? exchangeMapping.exchange : (q.exchange || "UNKNOWN");
       const market = exchangeMapping ? exchangeMapping.market.name : "UNKNOWN";
 
-      // Compute market open/closed status locally (no Yahoo API call)
-      const statusInfo = getMarketStatus(exchange);
+      // Use Yahoo's own marketState — handles holidays, DST, Japan lunch break automatically
+      const marketStatus = resolveMarketStatus(q.marketState);
 
       const entry = {
         symbol: q.symbol,
-        name: q.symbol,         // Keep 'name' for backward compat with old watchlist code
-        price: q.regularMarketPrice,  // NATIVE currency price (USD stays USD, INR stays INR)
+        name: q.symbol,               // keep 'name' for backward compat with old watchlist code
+        price: q.regularMarketPrice,  // NATIVE currency (USD stays USD, INR stays INR)
         nativePrice: q.regularMarketPrice,
         currency: q.currency || "INR",
         market: market,
         exchange: exchange,
-        marketStatus: statusInfo.status, // "OPEN" | "CLOSED"
+        marketStatus: marketStatus,   // "OPEN" | "CLOSED" | "PRE" | "POST"
         percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
         isDown: (q.regularMarketChangePercent || 0) < 0,
       };
@@ -113,7 +122,7 @@ const fetchBatch = async (symbolsToFetch) => {
 };
 
 // ---------------------------------------------------------------------------
-// Polling loop — broadcast live prices to subscribed WebSocket clients
+// Polling loop — broadcast live prices and status to subscribed WebSocket clients
 // ---------------------------------------------------------------------------
 const fetchAndBroadcast = async () => {
   if (symbolCounts.size === 0 || isFetching) return;
@@ -125,7 +134,6 @@ const fetchAndBroadcast = async () => {
     const results = await fetchBatch(symbolsToFetch);
     results.forEach((entry) => {
       if (ioRef) {
-        // Emit on both symbol and name channels for backward compat
         ioRef.to(`stock:${entry.symbol}`).emit("price_update", entry);
       }
     });

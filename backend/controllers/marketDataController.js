@@ -1,5 +1,6 @@
 const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance();
+const { normalizeYahooExchange } = require("../config/yahooExchanges");
 
 const { getInitialQuotes } = require("../services/marketDataService");
 
@@ -24,18 +25,31 @@ const searchQuotes = async (req, res) => {
     const query = req.query.q;
     if (!query) return res.status(400).json({ error: "Missing query parameter" });
 
-    // Search Yahoo Finance
     const result = await yahooFinance.search(query);
 
-    // Filter out irrelevant results, keep equities, ETFs, crypto, and indices
-    const formatted = result.quotes
-      .filter(q => ["EQUITY", "ETF", "CRYPTOCURRENCY", "INDEX"].includes(q.quoteType))
-      .slice(0, 5) // Return top 5 results
-      .map(q => ({
-        name: q.symbol,
-        longName: q.longname || q.shortname || q.symbol,
-        exchange: q.exchange
-      }));
+    // Include all asset types — equities, ETFs, crypto, indices from ANY market
+    const formatted = [];
+    const seenSymbols = new Set();
+
+    for (const q of result.quotes) {
+      if (!["EQUITY", "ETF", "CRYPTOCURRENCY", "INDEX"].includes(q.quoteType)) continue;
+      if (seenSymbols.has(q.symbol)) continue;
+      seenSymbols.add(q.symbol);
+
+      // Try to resolve exchange info — works for our 4 supported markets
+      const exchangeMapping = normalizeYahooExchange(q.exchange);
+
+      formatted.push({
+        symbol: q.symbol,
+        name: q.longname || q.shortname || q.symbol,
+        exchange: exchangeMapping ? exchangeMapping.exchange : (q.exchange || ""),
+        market: exchangeMapping ? exchangeMapping.market.name : "",
+        currency: q.currency || (exchangeMapping ? exchangeMapping.market.currency : ""),
+        assetType: q.quoteType,
+      });
+
+      if (formatted.length >= 10) break;
+    }
 
     res.json(formatted);
   } catch (err) {
@@ -46,12 +60,45 @@ const searchQuotes = async (req, res) => {
 
 const getMarketStatus = async (req, res) => {
   try {
-    // Query NIFTY 50 as the representative index for Indian Market
-    const quote = await yahooFinance.quote("^NSEI");
-    res.json({
-      state: quote.marketState || "CLOSED", // "REGULAR", "PRE", "POST", "CLOSED"
-      timestamp: new Date().toISOString()
+    // Use Yahoo's own marketState field — handles holidays, DST, and lunch breaks automatically.
+    // Fetch one representative symbol per exchange.
+    const symbols = [
+      "^NSEI",    // NSE (India)
+      "^BSESN",   // BSE (India)
+      "AAPL",     // NASDAQ (USA)
+      "JPM",      // NYSE (USA)
+      "7203.T",   // TSE (Japan)
+      "SHEL.L",   // LSE (UK)
+    ];
+
+    const quotes = await yahooFinance.quote(symbols);
+    const results = Array.isArray(quotes) ? quotes : [quotes];
+
+    // Map symbol → exchange name, then extract Yahoo's marketState
+    const exchangeSymbols = {
+      "^NSEI": "NSE",
+      "^BSESN": "BSE",
+      "AAPL": "NASDAQ",
+      "JPM": "NYSE",
+      "7203.T": "TSE",
+      "SHEL.L": "LSE",
+    };
+
+    const statusMap = {};
+    results.forEach(q => {
+      const exchange = exchangeSymbols[q.symbol];
+      if (exchange && q.marketState) {
+        // Yahoo returns: REGULAR (open), PRE, POST, CLOSED, PREPRE, POSTPOST
+        const isOpen = q.marketState === "REGULAR";
+        const isPrePost = ["PRE", "POST"].includes(q.marketState);
+        statusMap[exchange] = {
+          status: isOpen ? "OPEN" : isPrePost ? q.marketState : "CLOSED",
+          rawState: q.marketState,
+        };
+      }
     });
+
+    res.json({ exchanges: statusMap, timestamp: new Date().toISOString() });
   } catch (err) {
     console.error("Error fetching market status:", err);
     res.status(500).json({ state: "UNKNOWN" });
