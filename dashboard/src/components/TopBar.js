@@ -12,10 +12,19 @@ const MarketStatus = () => {
     const fetchStatus = async () => {
       try {
         const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/market-status`);
-        // Yahoo Finance returns "REGULAR" during normal open hours. 
+        // Yahoo Finance returns "REGULAR" during normal open hours.
         // Other states include "PRE", "POST", "CLOSED".
-        const isOpen = data.state === "REGULAR";
-        setStatus({ isOpen, label: data.state });
+        const stateMap = {
+          REGULAR: { isOpen: true, label: "Market Open" },
+          PRE: { isOpen: false, label: "Pre-Market" },
+          POST: { isOpen: false, label: "After Hours" },
+          CLOSED: { isOpen: false, label: "Market Closed" },
+        };
+        // Yahoo Finance sometimes returns "POSTPOST" or "PREPRE" for Indian indices
+        const raw = (data.state || "CLOSED").toUpperCase();
+        const normalized = raw.replace(/^(PRE|POST|REGULAR|CLOSED)\1$/, "$1"); // deduplicate
+        const mapped = stateMap[normalized] || stateMap[raw.slice(0, 4)] || { isOpen: false, label: "Market Closed" };
+        setStatus(mapped);
       } catch (err) {
         console.error("Failed to fetch market status", err);
       }
@@ -29,7 +38,6 @@ const MarketStatus = () => {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: 'auto', marginLeft: '20px', padding: '4px 10px', borderRadius: '4px', backgroundColor: '#f8f9fa', fontSize: '0.85rem' }}>
-      <span style={{ fontWeight: '500' }}>{status.label}</span>
       <span style={{
         display: 'inline-block',
         width: '8px',
@@ -37,7 +45,7 @@ const MarketStatus = () => {
         borderRadius: '50%',
         backgroundColor: status.isOpen ? '#4caf50' : '#f44336'
       }}></span>
-      <span style={{ color: '#666' }}>Market {status.isOpen ? 'Open' : 'Closed'}</span>
+      <span style={{ color: '#555', fontWeight: '500' }}>{status.label}</span>
     </div>
   );
 };
@@ -54,7 +62,7 @@ const TopBar = () => {
         const { data } = await axios.get(
           `${process.env.REACT_APP_BACKEND_URL}/quotes?symbols=^NSEI,^BSESN`
         );
-        
+
         const niftyData = data.find(q => q.name === "^NSEI");
         const sensexData = data.find(q => q.name === "^BSESN");
 

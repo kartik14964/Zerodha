@@ -86,3 +86,22 @@
   color: #4184f3;
   text-decoration: none;
 }
+
+/* ====== MOBILE RESPONSIVE STYLES ====== */
+@media screen and (max-width: 768px) {
+  .kite-landing-content {
+    flex-direction: column;
+    gap: 40px;
+    padding: 20px 0;
+  }
+
+  .kite-illustration {
+    order: -1; /* Ensure image is on top */
+  }
+
+  .kite-signup-section {
+    flex: 1 1 auto;
+    width: 100%;
+    padding: 0 15px;
+  }
+}

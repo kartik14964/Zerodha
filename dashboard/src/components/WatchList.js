@@ -25,6 +25,7 @@ const WatchList = () => {
   const [liveWatchlist, setLiveWatchlist] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [activeStockId, setActiveStockId] = useState(null);
   const socket = useSocket();
 
   const handleSearch = async (e) => {
@@ -235,13 +236,18 @@ const WatchList = () => {
         )}
       </div>
       <ul className="list">
-        {liveWatchlist.map((stock, index) => (
-          <WatchListItem 
-            stock={stock} 
-            key={stock._id || index} 
-            removeStockFromWatchlist={removeStockFromWatchlist}
-          />
-        ))}
+        {liveWatchlist.map((stock, index) => {
+          const stockId = stock._id || index;
+          return (
+            <WatchListItem 
+              stock={stock} 
+              key={stockId} 
+              isActive={activeStockId === stockId}
+              onToggle={() => setActiveStockId(activeStockId === stockId ? null : stockId)}
+              removeStockFromWatchlist={removeStockFromWatchlist}
+            />
+          );
+        })}
       </ul>
     </div>
   );
@@ -249,7 +255,7 @@ const WatchList = () => {
 
 export default WatchList;
 
-const WatchListItem = ({ stock, removeStockFromWatchlist }) => {
+const WatchListItem = ({ stock, removeStockFromWatchlist, isActive, onToggle }) => {
   const [flashClass, setFlashClass] = useState("");
   const prevPriceRef = React.useRef(stock.price);
 
@@ -268,7 +274,10 @@ const WatchListItem = ({ stock, removeStockFromWatchlist }) => {
   }, [stock.nativePrice]);
 
   return (
-    <li className={flashClass}>
+    <li 
+      className={`${flashClass} ${isActive ? "show-actions active" : ""}`} 
+      onClick={onToggle}
+    >
       <div className="item">
         <p className={stock.isDown ? "down" : "up"}>{stock.name}</p>
 
@@ -279,7 +288,7 @@ const WatchListItem = ({ stock, removeStockFromWatchlist }) => {
           ) : (
             <KeyboardArrowUp className="up" />
           )}
-          <span className="price">
+          <span className={`price ${stock.isDown ? "down" : "up"}`}>
             {stock.price === 0 
               ? "..." 
               : formatCurrency(stock.nativePrice || stock.price, stock.currency || 'INR')}
@@ -303,7 +312,7 @@ const WatchlistActions = ({stock, removeStockFromWatchlist}) => {
           arrow
           TransitionComponent={Grow}
         >
-          <button className="buy" onClick={() => openBuyWindow(stock)}>
+          <button className="buy" onClick={(e) => { e.stopPropagation(); openBuyWindow(stock); }}>
             Buy
           </button>
         </Tooltip>
@@ -313,7 +322,7 @@ const WatchlistActions = ({stock, removeStockFromWatchlist}) => {
           arrow
           TransitionComponent={Grow}
         >
-          <button className="sell" onClick={() => openSellWindow(stock)}>
+          <button className="sell" onClick={(e) => { e.stopPropagation(); openSellWindow(stock); }}>
             Sell
           </button>
         </Tooltip>
@@ -323,7 +332,7 @@ const WatchlistActions = ({stock, removeStockFromWatchlist}) => {
           arrow
           TransitionComponent={Grow}
         >
-          <button className="action" onClick={() => openChartWindow(stock)}>
+          <button className="action" onClick={(e) => { e.stopPropagation(); openChartWindow(stock); }}>
             <BarChartOutlined className="icon" />
           </button>
         </Tooltip>
@@ -333,7 +342,7 @@ const WatchlistActions = ({stock, removeStockFromWatchlist}) => {
           arrow
           TransitionComponent={Grow}
         >
-          <button className="action" onClick={() => removeStockFromWatchlist(stock._id)}>
+          <button className="action" onClick={(e) => { e.stopPropagation(); removeStockFromWatchlist(stock._id); }}>
             <DeleteOutlined className="icon" />
           </button>
         </Tooltip>

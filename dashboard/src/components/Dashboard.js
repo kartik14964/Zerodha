@@ -1,5 +1,5 @@
 import React from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 
 import Apps from "./Apps";
 import Funds from "./Funds";
@@ -13,8 +13,11 @@ import { GeneralContextProvider } from "./GeneralContext";
 import { Toaster } from "react-hot-toast";
 
 const Dashboard = () => {
+  const location = useLocation();
+  const isWatchlistRoute = location.pathname === "/";
+
   return (
-    <div className="dashboard-container">
+    <div className={`dashboard-container ${isWatchlistRoute ? "mobile-watchlist-active" : "mobile-content-active"}`}>
       <Toaster position="bottom-right" reverseOrder={false} />
       <GeneralContextProvider>
         <WatchList />

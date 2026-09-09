@@ -210,7 +210,7 @@ const Holdings = () => {
       <div className="row">
         <div className="col">
           <h5>
-            {totalInvestment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatINR(totalInvestment)}
           </h5>
           <p>Total investment</p>
         </div>

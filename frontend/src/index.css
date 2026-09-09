@@ -51,3 +51,40 @@ footer a:hover {
 #supportHero input {
   font-size: 16px;
 }
+
+/* ====== MOBILE RESPONSIVE STYLES ====== */
+@media screen and (max-width: 768px) {
+  /* Fix nav link margins when hamburger menu is open */
+  .nav-link {
+    margin-left: 0 !important;
+    padding: 10px 0 !important;
+    text-align: center;
+  }
+  
+  /* Fix hardcoded inline width styles (e.g. 20%) on sign up buttons */
+  .btn.btn-primary {
+    width: 80% !important;
+    display: block;
+    margin: 15px auto !important;
+  }
+  
+  /* Force all hardcoded bootstrap columns (col-6, col-4) to stack */
+  .row > [class^="col-"], .row > .col {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 20px;
+    padding: 0 15px !important;
+  }
+  
+  /* Ensure all images scale down */
+  img {
+    max-width: 100%;
+    height: auto !important;
+  }
+  
+  /* Center footer text */
+  .d-flex.flex-wrap.justify-content-center {
+    flex-direction: column;
+    align-items: center;
+  }
+}

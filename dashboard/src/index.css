@@ -253,7 +253,7 @@ code {
 }
 
 .menu-container {
-  flex-basis: 68%;
+  flex: 1;
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -282,6 +282,10 @@ code {
   text-decoration: none;
 }
 
+.mobile-nav-icon {
+  display: none;
+}
+
 .menu {
   font-size: 0.8rem;
   font-weight: 400;
@@ -297,12 +301,13 @@ hr {
   height: 30px;
 }
 
-.profile {
+.profile-nav-item {
   display: flex;
   align-items: center;
   justify-content: space-evenly;
   margin-left: 20px;
   margin-right: 9px;
+  position: relative;
 }
 
 .profile .avatar {
@@ -322,10 +327,15 @@ hr {
   margin-right: 8px;
 }
 
-.profile .username {
+.profile-nav-item .username {
   font-size: 0.8rem;
   font-weight: 300;
 }
+
+.mobile-profile-label {
+  display: none;
+}
+
 
 /* sudo selectors */
 
@@ -344,7 +354,10 @@ hr {
 
 .orders {
   width: 100%;
-  height: 90vh;
+  height: auto;
+  min-height: 60vh;
+  padding-bottom: 40px;
+  box-sizing: border-box;
 }
 
 .no-orders {
@@ -577,10 +590,14 @@ hr {
   box-shadow: 0px 0px 4px 2px rgb(236, 235, 235);
   box-sizing: border-box;
   z-index: 9;
+  position: relative;
+  /* Create stacking context */
 }
 
 .indices-container {
-  width: 400px;
+  width: 30%;
+  max-width: 400px;
+  min-width: 280px;
   flex-shrink: 0;
   height: 100%;
   padding: 10px 20px;
@@ -589,6 +606,7 @@ hr {
   display: flex;
   align-items: center;
   justify-content: space-around;
+  position: relative;
 }
 
 .nifty {
@@ -596,7 +614,7 @@ hr {
   display: flex;
   align-items: center;
   justify-content: space-evenly;
-  z-index: -2;
+  z-index: 1;
 }
 
 .sensex {
@@ -604,6 +622,7 @@ hr {
   display: flex;
   align-items: center;
   justify-content: space-evenly;
+  z-index: 1;
 }
 
 .nifty>*,
@@ -637,7 +656,9 @@ hr {
 }
 
 .watchlist-container {
-  width: 400px;
+  width: 30%;
+  max-width: 400px;
+  min-width: 280px;
   flex-shrink: 0;
   height: 100%;
   box-sizing: border-box;
@@ -650,7 +671,11 @@ hr {
   display: flex;
   align-items: center;
   justify-content: space-evenly;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .search {
@@ -696,28 +721,33 @@ hr {
 
 .item-info {
   display: flex;
-  justify-content: space-evenly;
+  justify-content: flex-end;
   align-items: center;
+  gap: 12px;
+  min-width: 170px;
 }
 
 .item-info>* {
-  margin-right: 8px;
+  margin-right: 0;
 }
 
-.item-info span:nth-child(1) {
+.item-info .percent {
   color: rgb(141, 141, 141);
-  flex: 1;
+  width: 55px;
+  text-align: right;
+  flex: none;
 }
 
-.item-info span:nth-child(2) {
-  color: rgb(223, 73, 73);
-  margin-right: 12px;
-  flex: 2;
+.item-info svg {
+  width: 16px;
+  text-align: center;
+  flex: none;
 }
 
-.item-info span:nth-child(3) {
-  color: rgb(223, 73, 73);
-  flex: 1;
+.item-info .price {
+  width: 80px;
+  text-align: right;
+  flex: none;
 }
 
 .actions {
@@ -815,18 +845,32 @@ hr {
   border-bottom: 1px solid #ff5722;
 }
 
-.list li:hover {
-  cursor: move;
+.list li.active {
   background-color: #f3f3f3;
 }
 
-.list li:hover .item-info {
+.list li.show-actions .item-info {
   visibility: hidden;
 }
 
-.list li:hover>.actions {
+.list li.show-actions>.actions {
   display: flex;
-  cursor: move;
+}
+
+@media (hover: hover) {
+  .list li:hover {
+    cursor: move;
+    background-color: #f3f3f3;
+  }
+
+  .list li:hover .item-info {
+    visibility: hidden;
+  }
+
+  .list li:hover>.actions {
+    display: flex;
+    cursor: move;
+  }
 }
 
 /* Animations for Live Price Ticks */
@@ -1050,4 +1094,532 @@ hr {
 .btn-blue-outline:hover {
   background: #4184f3 !important;
   color: #fff !important;
+}
+
+/* ====== MOBILE RESPONSIVE STYLES ====== */
+@media screen and (max-width: 1111px) {
+
+  /* ─── 1. Page scrolls naturally on mobile ─── */
+  body {
+    /* No height/overflow constraints — browser handles page scroll */
+    overflow-x: hidden;
+  }
+
+  /* Topbar sticks to the top as user scrolls */
+  .topbar-container {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #fff;
+  }
+
+  /* Dashboard is a simple vertical stack — no height or overflow */
+  .dashboard-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    /* Override the 90vh from base styles */
+    overflow: visible;
+    /* Let page scroll handle it */
+    /* Pad the bottom so content clears the fixed bottom nav */
+    padding-bottom: calc(56px + env(safe-area-inset-bottom) + 16px);
+  }
+
+  /* ─── 2. Topbar (overriding the flex-shrink above) ─── */
+  .topbar-container {
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px 16px;
+    gap: 0;
+  }
+
+  .indices-container {
+    width: 100%;
+    max-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 8px 0;
+    justify-content: space-evenly;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .nifty,
+  .sensex {
+    flex-basis: auto;
+    gap: 4px;
+    align-items: baseline;
+  }
+
+  .nifty>*,
+  .sensex>* {
+    margin-right: 0;
+  }
+
+  .index {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  .index-points {
+    font-size: 13px;
+  }
+
+  .percent {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* ─── 3. Bottom Navigation (Zerodha/Groww style) ─── */
+  .menu-container {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 56px;
+    background-color: #ffffff;
+    z-index: 1000;
+    box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.08), 0 -4px 12px rgba(0, 0, 0, 0.06);
+    padding: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-sizing: border-box;
+  }
+
+  /* Hide logo and divider — not needed in bottom nav */
+  .nav-logo,
+  .menu-container hr {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    flex: none !important;
+    overflow: hidden !important;
+  }
+
+  .menus {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .menus ul {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: stretch;
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    list-style: none;
+  }
+
+  .menus li {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    text-align: center;
+  }
+
+
+  .menus .menu {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    height: 100%;
+    width: 100%;
+    min-height: 48px;
+    /* Minimum touch target */
+    padding: 6px 4px;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .menus li p {
+    font-size: 10px;
+    font-weight: 500;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+  }
+
+  .mobile-nav-icon {
+    display: block !important;
+    font-size: 20px;
+    line-height: 1;
+    color: inherit;
+  }
+
+  .profile-nav-item .dropdown-menu {
+    top: auto;
+    bottom: calc(100% + 8px);
+    right: 8px;
+    left: auto;
+  }
+
+  /* translateY removed */
+
+
+
+  /* ─── 4. Watchlist — full width, scrolls internally ─── */
+  .watchlist-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    /* Override base 400px cap */
+    min-width: 0 !important;
+    /* Override base 280px minimum */
+    height: 50vh;
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    border-bottom: 1px solid #e8e8e8;
+    box-shadow: none;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    background: #fff;
+  }
+
+
+  .watchlist-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Search bar */
+  .search-container {
+    display: flex;
+    align-items: center;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: white !important;
+    border-bottom: 1px solid #ebebeb !important;
+    padding: 0;
+  }
+
+  .search {
+    flex: 1;
+    height: 40px;
+    font-size: 0.78rem;
+    padding: 10px 14px;
+    color: #555;
+  }
+
+  .counts {
+    position: static;
+    padding-right: 14px;
+    font-size: 0.78rem;
+    color: #bbb;
+    flex-shrink: 0;
+  }
+
+  /* List reset */
+  .list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  /* ─── 5. Content — flows naturally below watchlist ─── */
+  .content {
+    width: 100%;
+    height: auto;
+    /* Override base 100% height */
+    overflow: visible;
+    /* No clipping — page scroll handles it */
+    padding: 14px 14px 8px;
+    box-sizing: border-box;
+    border-top: 2px solid #f0f0f0;
+    background: #fff;
+    text-align: center;
+  }
+
+  /* ─── 6. Grid & Row Layouts ─── */
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .col {
+    width: 100%;
+    margin-bottom: 0;
+    text-align: left;
+    /* Left-align is more scannable than center */
+  }
+
+  .data {
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 0;
+    gap: 8px;
+  }
+
+  .profile-nav-item .username {
+    display: none;
+  }
+
+  .mobile-profile-label {
+    display: block;
+  }
+
+  .data hr {
+    display: none;
+  }
+
+  .funds-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .funds-breakdown {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+
+  /* ─── 7. Tables ─── */
+  .order-table,
+  .table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    width: 100%;
+    border-radius: 8px;
+  }
+
+  .order-table table {
+    min-width: 560px;
+    border-collapse: collapse;
+  }
+
+  /* ─── 8. Summary Page ─── */
+  .data .first h3 {
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .data .second {
+    margin-top: 12px;
+    width: 100%;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ─── 9. Funds Page ─── */
+  .funds-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .funds-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .funds-summary {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .margin-stats {
+    width: 100%;
+  }
+
+  /* ─── 10. Watchlist Rows ─── */
+  .list li {
+    padding: 12px 16px;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-bottom: 1px solid #f2f2f2;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+
+  /* The main row: name left, data right */
+  .list li .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 400;
+  }
+
+  /* Stock name */
+  .list li .item>p {
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    margin: 0;
+    flex: 1;
+  }
+
+  /* Right-side data cluster */
+  .list li .item-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
+  .list li .item-info .percent {
+    font-size: 0.72rem;
+    color: #999;
+    width: auto;
+    text-align: right;
+  }
+
+  .list li .item-info svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  .list li .item-info .price {
+    font-size: 0.8rem;
+    font-weight: 400;
+    width: auto;
+    text-align: right;
+    min-width: 64px;
+  }
+
+  /* Hide action buttons by default on mobile; show on tap */
+  .list li .actions {
+    display: none !important;
+  }
+
+  .list li.show-actions .actions {
+    display: flex !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: flex-end;
+    background: #f8f8f8;
+    padding-right: 12px;
+    box-sizing: border-box;
+  }
+
+  /* Keep item-info visible on tap */
+  .list li.show-actions .item-info {
+    visibility: visible;
+  }
+
+
+
+  .order-table th {
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .order-table td {
+    padding: 12px 12px;
+    font-size: 13px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .btn {
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 44px;
+    border-radius: 6px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ─── 11. Modal Windows (Buy/Sell/Chart) ─── */
+  #buy-window,
+  #sell-window {
+    width: 90% !important;
+    height: auto !important;
+    left: 5% !important;
+    top: 50% !important;
+    bottom: auto !important;
+    position: fixed !important;
+    transform: translateY(-50%) !important;
+    z-index: 9999 !important;
+  }
+
+  /* Let desktop inline layout handle .actions on mobile */
+
+  #chart-window {
+    width: 95% !important;
+    height: 65vh !important;
+    left: 2.5% !important;
+    top: 50% !important;
+    bottom: auto !important;
+    position: fixed !important;
+    transform: translateY(-50%) !important;
+    z-index: 9999 !important;
+  }
+}
+
+/* ─── Narrow phones (≤ 390px) ─── */
+@media screen and (max-width: 390px) {
+  .content {
+    padding: 12px;
+  }
+
+  .topbar-container {
+    padding: 6px 12px;
+  }
+
+  .index,
+  .index-points {
+    font-size: 12px;
+  }
+
+  .percent {
+    font-size: 11px;
+  }
+
+  .menus li p {
+    font-size: 9px;
+  }
+
+  .mobile-nav-icon {
+    font-size: 18px;
+  }
+
+  .btn {
+    padding: 9px 14px;
+    font-size: 13px;
+  }
+
+
 }
