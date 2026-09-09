@@ -1,161 +1,269 @@
-# Full-Stack Trading Platform
+# Zerodha Clone — Full-Stack Global Trading Platform
 
-A full-stack trading platform focused on transactional order processing, idempotency, real-time market-data delivery, and concurrency safety. This project features a secure authentication flow and an interactive trading dashboard where users can monitor holdings, execute market orders, view positions, manage funds, and visualize their portfolio performance.
-
----
-
-## ✨ Key Engineering Features
-
-- **Transactional and Idempotent Order Engine**: Market orders (`BUY` / `SELL`) are processed within MongoDB Transactions. The engine verifies balances, deducts funds, updates holdings, and modifies positions in an atomic chain, ensuring transactional consistency and concurrency safety. Any failure during the workflow instantly rolls back the database state.
-- **Database-Enforced Idempotency**: Order execution prevents duplicate charges and race conditions via unique UUID `idempotencyKeys` coupled with MongoDB compound unique indexes on `(user, idempotencyKey)`. Identical concurrent requests are gracefully handled and safely returned without double-charging.
-- **Real-Time Market Data Delivery**: WebSocket-based client updates with periodic (e.g., 5s) upstream market-data refreshes. A shared `SocketContext` in the React frontend maintains a persistent connection, listening to symbol-specific rooms (e.g., `stock:RELIANCE.NS`) to ensure instant UI updates.
-- **Multi-Currency Price & Margin Handling**: The dashboard displays global assets in their native currencies and shows an estimated INR equivalent using the latest FX rate. During order execution, the backend uses the trusted cached FX rate to calculate the authoritative INR margin, avoiding unnecessary multi-currency accounting complexity.
-
-  ```mermaid
-  flowchart TD
-      YF["Yahoo Finance API"]
-      
-      YF -->|"HTTP Polling (Backend periodic refresh every 5s)<br/>BTC-USD: $79,000 | INR=X: ₹83.5"| BE
-      
-      subgraph Backend ["Node.js Backend"]
-          BE["Market Data Service"] --> Cache["In-Memory Cache"]
-          Cache --> Socket["Socket.IO Server"]
-      end
-      
-      Socket -->|"Instant WebSocket Broadcast<br/>{ native: 79000, currency: 'USD' }"| FE
-      
-      subgraph Frontend ["React Dashboard"]
-          FE["Socket.io-client"] --> WL["Watchlist<br/>(Displays $79,000)"]
-          WL --> BW["Buy Action Window<br/>(Displays Estimated ₹6.6M INR Margin)"]
-      end
-  ```
-
-- **Smart Caching Layer**: Uses `node-cache` to reduce redundant upstream requests and improve delivery efficiency for frequently requested symbols.
-- **Interactive Candlestick Charts**: Integrated `react-ts-tradingview-widgets` to serve interactive TradingView charts. Intelligent symbol mapping ensures that Indian stocks are routed through BSE to bypass delayed data restrictions.
-- **Secure Authentication**: End-to-end user authentication using JSON Web Tokens (JWT) and BcryptJS password hashing.
+A production-grade trading platform inspired by Zerodha, supporting **live global markets** across India, USA, Japan, UK, Europe, Australia, Canada, China, and Crypto. Built with React, Node.js, Express, MongoDB, Socket.IO, and Yahoo Finance.
 
 ---
 
-## 🏗️ Project Architecture & Structure
+## Key Features
 
-The repository is structured into three main directories:
+### Global Market Support
+- Search and trade stocks from **any global exchange** — NSE, BSE, NASDAQ, NYSE, LSE, TSE, ASX, HKEX, TSXV, and more
+- Every stock retains its **native currency** (INR, USD, GBP, JPY, AUD, CAD, HKD, EUR, etc.)
+- Market open/close/pre/post status is shown **per exchange**, dynamically derived from Yahoo Finance's live `marketState` field — no hardcoded clocks or timers
 
-```text
+### Yahoo Exchange Mapping (`yahooExchanges.js`)
+Yahoo Finance uses its own internal exchange codes (e.g., `"NMS"` for NASDAQ, `"NSI"` for NSE, `"TKS"` for Tokyo). `yahooExchanges.js` is a translation layer that maps these to:
+- The correct **canonical exchange name** (for display and DB storage)
+- The correct **TradingView symbol prefix** (e.g., `NSE:RELIANCE`, `NASDAQ:AAPL`, `ASX:AGD`)
+- The correct **market and currency** (so FX conversion knows what rate to fetch)
+
+For any exchange not in the dictionary, a **dynamic fallback** automatically uses the raw Yahoo code — so unknown exchanges work without any code changes.
+
+### Dynamic FX Conversion Engine (`fxService.js`)
+- When a foreign-currency stock is purchased, the system **dynamically fetches the live FX rate** (e.g., USD → INR) from Yahoo Finance
+- FX rates are **cached for 10 minutes** to protect against rate-limit abuse
+- Uses a **USD intermediary fallback** (e.g., AUD → USD → INR) if a direct pair is unavailable
+- If the FX service is completely down, the order is **safely rejected** — your wallet is never debited an incorrect amount
+- Historical transactions store the **FX rate at transaction time** and are never retroactively recalculated
+
+### Portfolio Valuation — INR Normalised (`portfolioValuationService.js`)
+- All holdings across multiple currencies are summed in **INR** using live FX rates
+- Dashboard P&L and Holdings P&L use the **same centralised `/valuation` API**, so they always match
+- Individual stock rows display prices in their **native currency** (e.g., Apple in USD, Reliance in INR)
+- Account-level totals (investment, current value, P&L) are always displayed in **INR**
+
+### Real-Time Market Data via WebSockets
+- Yahoo Finance is polled every **5 seconds** on the backend
+- Data is broadcast via **Socket.IO** to subscribed clients only (by watchlist symbol)
+- Reconnects and retries handled automatically with exponential backoff
+
+### TradingView Chart Integration
+- Every stock opens an interactive **TradingView Advanced Chart**
+- The TradingView symbol (e.g., `ASX:AGD`, `NASDAQ:AAPL`, `NSE:RELIANCE`) is **computed on the backend** from Yahoo's raw exchange code via `yahooExchanges.js`
+- No manual symbol lists needed — any stock works automatically
+
+### Transactional and Idempotent Order Engine
+- BUY/SELL orders are executed inside **MongoDB transactions** — balance, holdings, positions, and order records are committed or rolled back as an atomic unit
+- **Idempotency keys** (UUID) with a compound unique index on `(user, idempotencyKey)` prevent duplicate orders from concurrent submissions
+
+### Secure Authentication
+- JWT-based authentication across all HTTP routes and Socket.IO upgrade handshakes
+- Passwords hashed with `bcryptjs` — plaintext never stored
+
+---
+
+## Architecture Overview
+
+```
 Zerodha/
-├── backend/            # Express.js REST API server, WebSockets, & MongoDB
-├── frontend/           # React application for marketing and landing pages
-└── dashboard/          # React application for the interactive trading dashboard
+├── backend/
+│   ├── config/
+│   │   ├── markets.js              # Market definitions: INDIA, USA, JAPAN, UK, EUROPE, AUSTRALIA, CANADA, CHINA, CRYPTO
+│   │   └── yahooExchanges.js       # Yahoo exchange code -> canonical exchange + TradingView prefix (dynamic fallback for unknowns)
+│   ├── controllers/
+│   │   ├── authController.js       # Signup / Login / /me
+│   │   ├── fundsController.js      # Add / Withdraw funds
+│   │   ├── marketDataController.js # /quotes, /search, /marketStatus
+│   │   ├── orderController.js      # BUY/SELL engine with FX conversion + MongoDB transaction
+│   │   ├── portfolioController.js  # /allHoldings, /allPositions, /valuation
+│   │   └── watchlistController.js  # CRUD for user watchlist
+│   ├── services/
+│   │   ├── marketDataService.js    # Yahoo Finance poller -> in-memory cache -> Socket.IO broadcaster
+│   │   ├── marketSocket.js         # WebSocket subscription manager (per-symbol rooms)
+│   │   ├── fxService.js            # Live FX rates: direct pair + USD intermediary fallback + 10min cache
+│   │   ├── portfolioValuationService.js  # INR-normalised P&L using live FX rates
+│   │   ├── stockNormalizer.js      # Canonicalises Yahoo search results into internal stock objects
+│   │   └── marketStatusService.js  # Per-exchange open/closed status from Yahoo marketState
+│   ├── model/                      # Mongoose schemas: User, Holdings, Positions, Orders, Watchlist
+│   ├── routes/                     # Express routers
+│   └── middleware/
+│       └── authMiddleware.js       # JWT verification + security headers
+│
+├── frontend/                       # React — Landing page + Login / Signup
+│   └── src/landing_page/
+│       ├── Auth/                   # Login and Signup forms
+│       └── home/, about/, products/, pricing/, support/
+│
+└── dashboard/                      # React — Interactive Trading Dashboard
+    └── src/components/
+        ├── Dashboard.js            # Top-level grid layout
+        ├── WatchList.js            # Live prices via Socket.IO, add/remove stocks, per-exchange market status
+        ├── ChartWindow.js          # TradingView chart (symbol computed from backend)
+        ├── BuyActionWindow.js      # BUY order form with FX-aware margin preview
+        ├── SellActionWindow.js     # SELL order form
+        ├── Holdings.js             # Holdings table (native currency per row) + INR summary from /valuation
+        ├── Positions.js            # Positions table with live P&L
+        ├── Orders.js               # Order history log
+        ├── Funds.js                # Wallet balance, deposit, withdraw
+        └── Summary.js              # Dashboard sidebar — margin, holdings P&L from /valuation
 ```
 
-### File & Folder Breakdown
+---
 
-#### 📂 [Backend](./backend)
-*   [index.js](./backend/index.js): Entry point of the Express API, routing, middlewares (CORS, JWT parser, Security headers), and Socket.IO initialization.
-*   📂 [controllers/](./backend/controllers): Route handlers (e.g., `orderController.js` containing the transactional order engine).
-*   📂 [routes/](./backend/routes): Express routers mapping HTTP endpoints to controllers.
-*   📂 [services/](./backend/services): Centralized business logic.
-    *   `marketDataService.js`: Fetches market data from Yahoo Finance and manages the in-memory cache.
-    *   `marketSocket.js`: Manages WebSocket connections, symbol subscriptions, rooms, and live broadcasting.
-*   📂 [model/](./backend/model) & 📂 [schemas/](./backend/schemas): Mongoose schemas and models defining database structures and unique compound indexes.
+## Data Flow
 
-#### 📂 [Frontend (Auth & Landing)](./frontend)
-*   📂 `src/landing_page`: Components representing specific sections of the main website.
-    *   `Auth/`: Handles signup and login views.
-    *   `home/`, `about/`, `products/`, `pricing/`, `support/`: Content sections styled to match a professional brokerage layout.
-
-#### 📂 [Dashboard](./dashboard)
-*   📂 `src/components`: Modules powering the trading experience.
-    *   [Dashboard.js](./dashboard/src/components/Dashboard.js): Grid manager loading interactive subcomponents.
-    *   [WatchList.js](./dashboard/src/components/WatchList.js): Displays live stock updates via WebSockets, flashes on price change, and triggers buy/sell/chart dialogs.
-    *   [ChartWindow.js](./dashboard/src/components/ChartWindow.js): Interactive TradingView charting integration.
-    *   [BuyActionWindow.js](./dashboard/src/components/BuyActionWindow.js) / [SellActionWindow.js](./dashboard/src/components/SellActionWindow.js): Context windows for placing market orders (auto-generating idempotency keys).
-    *   [Holdings.js](./dashboard/src/components/Holdings.js) & [Positions.js](./dashboard/src/components/Positions.js): Tables showing owned assets and real-time profit/loss (P&L) via WebSocket streams.
-    *   [Orders.js](./dashboard/src/components/Orders.js): Logs transaction histories of placed orders.
-    *   [Funds.js](./dashboard/src/components/Funds.js): Visualizer for available margin and user balances with functionality to deposit/withdraw cash.
+```
+Yahoo Finance API (free, no API key needed)
+         |
+         | HTTP poll every 5 seconds (quotes + live marketState)
+         | HTTP on-demand (FX rates: USDINR=X, GBPINR=X, ...)
+         | HTTP on-demand (search: /search?q=Apple)
+         v
+  marketDataService.js  ──────────────────────────────────┐
+  (poller + in-memory cache)                              |
+         |                                                |
+         | Socket.IO broadcast (price_update events)      | REST /quotes
+         v                                                v
+  WatchList.js                                   Holdings.js / Positions.js
+  (live prices in native currency)               (native currency per row)
+  (● Open / ● Pre / ● Post / ● Closed per stock)
+         |
+         | User clicks BUY
+         v
+  orderController.js
+  (1. fetch live price from cache or Yahoo)
+  (2. fetch live FX rate via fxService.js)
+  (3. calculate exact INR cost)
+  (4. MongoDB transaction: debit wallet, write Holdings/Positions/Orders)
+         |
+         v
+  portfolioValuationService.js  ◄── called by /valuation endpoint
+  (fetches all holdings, applies live FX rates, returns INR totals)
+         |
+         v
+  Dashboard Summary + Holdings footer
+  (always in sync — same API, same FX rates)
+```
 
 ---
 
-## ⚡ Setup & Local Running Instructions
+## Setup and Running Locally
 
 ### Prerequisites
-*   Node.js (v18+)
-*   MongoDB Instance (Must be a **Replica Set** like MongoDB Atlas to support Transactions)
+- Node.js v18+
+- MongoDB with Replica Set (required for transactions — use [MongoDB Atlas](https://www.mongodb.com/atlas) free tier)
 
-### Step 1: Clone and Configure Environment Files
+### Step 1: Clone
 
-Create `.env` files in each project subfolder based on the configurations below:
+```bash
+git clone https://github.com/kartik14964/Zerodha.git
+cd Zerodha
+```
 
-#### 1. Backend Config (`backend/.env`)
-```env
+### Step 2: Configure Environment Files
+
+**`backend/.env`**
+```
 PORT=3002
 MONGO_URL=your_mongodb_connection_string
-JWT_SECRET=your_jwt_signing_key
+JWT_SECRET=your_jwt_signing_secret
 FRONTEND_AUTH_URL=http://localhost:3001
 FRONTEND_DASHBOARD_URL=http://localhost:3000
 ```
 
-#### 2. Frontend Config (`frontend/.env`)
-```env
+**`frontend/.env`**
+```
 REACT_APP_BACKEND_URL=http://localhost:3002
 REACT_APP_DASHBOARD_URL=http://localhost:3000
 ```
 
-#### 3. Dashboard Config (`dashboard/.env`)
-```env
+**`dashboard/.env`**
+```
 REACT_APP_BACKEND_URL=http://localhost:3002
 REACT_APP_FRONTEND_URL=http://localhost:3001
 ```
 
-### Step 2: Install Dependencies & Run
+### Step 3: Install and Run (3 terminals)
 
-Open three terminal windows to run the services:
-
-#### Window 1: Start Backend
 ```bash
-cd backend
-npm install
-npm start
+# Terminal 1 — Backend
+cd backend && npm install && npm start
+
+# Terminal 2 — Frontend (Auth / Landing)
+cd frontend && npm install && npm start
+
+# Terminal 3 — Dashboard
+cd dashboard && npm install && npm start
 ```
 
-#### Window 2: Start Frontend
-```bash
-cd frontend
-npm install
-npm start
-```
-
-#### Window 3: Start Dashboard
-```bash
-cd dashboard
-npm install
-npm start
-```
+| Service   | URL                   |
+| :-------- | :-------------------- |
+| Dashboard | http://localhost:3000 |
+| Frontend  | http://localhost:3001 |
+| Backend   | http://localhost:3002 |
 
 ---
 
-## 🔌 API Endpoints Summary
+## API Reference
 
-All routes (except `/login`, `/signup`, and `/ping`) require authentication via a Bearer token in the `Authorization` header: `Authorization: Bearer <token>`.
+All routes except `/login`, `/signup`, `/ping` require:
+```
+Authorization: Bearer <token>
+```
 
-| Route | Method | Description |
-| :--- | :--- | :--- |
-| `/signup` | POST | Creates a new user account with hashed password |
-| `/login` | POST | Authenticates user, returns JWT and user info |
-| `/logout` | POST | Handles session ending client-side |
-| `/me` | GET | Fetches user balance and account metadata |
-| `/watchlist` | GET/POST/DEL | Manages a user's custom watchlist symbols in MongoDB |
-| `/quotes` | GET | REST market-data endpoint (fetches initial prices for frontend hydration) |
-| `/allHoldings`| GET | Returns user's stock holdings |
-| `/allPositions`| GET | Returns user's active market positions |
-| `/addFunds` | POST | Injects cash into the user's account |
-| `/withdrawFunds`| POST| Withdraws cash from the user's account |
-| `/newOrder` | POST | Executes a `BUY`/`SELL` order inside a MongoDB transaction (requires `idempotencyKey`) |
-| `/allOrders` | GET | Returns log history of all user orders |
+### Auth
+| Method | Route     | Description                              |
+| :----- | :-------- | :--------------------------------------- |
+| POST   | /signup   | Create account (email + hashed password) |
+| POST   | /login    | Authenticate, receive JWT                |
+| GET    | /me       | Get current user info + wallet balance   |
+
+### Market Data
+| Method | Route                  | Description                                       |
+| :----- | :--------------------- | :------------------------------------------------ |
+| GET    | /search?q=...          | Search global stocks via Yahoo Finance            |
+| GET    | /quotes?symbols=...    | Fetch live quotes for given symbols               |
+| GET    | /marketStatus          | Per-exchange open/closed status (NSE, NYSE, etc.) |
+
+### Portfolio
+| Method | Route          | Description                                    |
+| :----- | :------------- | :--------------------------------------------- |
+| GET    | /allHoldings   | User's holdings with native currency           |
+| GET    | /allPositions  | User's active positions                        |
+| GET    | /valuation     | INR-normalised portfolio P&L via live FX rates |
+
+### Orders
+| Method | Route       | Description                                         |
+| :----- | :---------- | :-------------------------------------------------- |
+| POST   | /newOrder   | Execute BUY/SELL (requires idempotencyKey in body)  |
+| GET    | /allOrders  | Full order history for the user                     |
+
+### Watchlist
+| Method | Route            | Description                   |
+| :----- | :--------------- | :---------------------------- |
+| GET    | /watchlist       | Get user's watchlist          |
+| POST   | /watchlist       | Add stock to watchlist        |
+| DELETE | /watchlist/:id   | Remove stock from watchlist   |
+
+### Funds
+| Method | Route           | Description              |
+| :----- | :-------------- | :----------------------- |
+| POST   | /addFunds       | Deposit INR to wallet    |
+| POST   | /withdrawFunds  | Withdraw INR from wallet |
 
 ---
 
-## 🔒 Security & Integrity Engine
+## Security and Integrity
 
-1. **Authentication:** End-to-end JWT validation across all HTTP routes and Socket.io upgrade requests. Passwords encrypted natively with `bcrypt`.
-2. **MongoDB Transactions:** Transactions ensure balance, holdings, positions, and order records are committed or rolled back atomically. The system writes to the `Users`, `Orders`, `Holdings`, and `Positions` collections as an indivisible unit.
-3. **Database-Idempotency:** A unique compound index on `(user, idempotencyKey)` inside the database actively rejects and mitigates identical concurrent duplicate requests, protecting against accidental retries and duplicate concurrent submissions.
+| Layer                | Mechanism                                                                                       |
+| :------------------- | :---------------------------------------------------------------------------------------------- |
+| Authentication       | JWT verification on every HTTP request and Socket.IO handshake                                 |
+| Password Security    | bcryptjs hashing — plaintext passwords never stored                                            |
+| Atomic Orders        | MongoDB transactions — balance, holdings, positions, orders all commit or rollback together    |
+| Idempotency          | UUID idempotencyKey + DB unique index on (user, idempotencyKey) — duplicate orders rejected    |
+| FX Safety            | Orders rejected if live FX rate unavailable — wallet never debited incorrect INR amount        |
+| Rate Limit Protection| Yahoo Finance requests cached (5s quotes, 10min FX) with 5-minute cooldown on 429 errors      |
+| Security Headers     | Middleware applies security headers globally on all responses                                  |
+
+---
+
+## Tech Stack
+
+| Layer       | Technology                                                    |
+| :---------- | :------------------------------------------------------------ |
+| Frontend    | React, Socket.IO Client, Axios, Chart.js, TradingView Widgets |
+| Backend     | Node.js, Express.js, Socket.IO, yahoo-finance2                |
+| Database    | MongoDB Atlas (Replica Set), Mongoose                         |
+| Auth        | JSON Web Tokens (JWT), bcryptjs                               |
+| Market Data | yahoo-finance2 (free, no API key required)                    |
+| Real-Time   | Socket.IO (WebSockets)                                        |

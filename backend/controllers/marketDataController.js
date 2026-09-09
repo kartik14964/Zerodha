@@ -1,6 +1,6 @@
 const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance();
-const { normalizeYahooExchange } = require("../config/yahooExchanges");
+const { normalizeYahooExchange, buildTradingViewSymbol } = require("../config/yahooExchanges");
 
 const { getInitialQuotes } = require("../services/marketDataService");
 
@@ -36,7 +36,6 @@ const searchQuotes = async (req, res) => {
       if (seenSymbols.has(q.symbol)) continue;
       seenSymbols.add(q.symbol);
 
-      // Try to resolve exchange info — works for our 4 supported markets
       const exchangeMapping = normalizeYahooExchange(q.exchange);
 
       formatted.push({
@@ -46,6 +45,7 @@ const searchQuotes = async (req, res) => {
         market: exchangeMapping ? exchangeMapping.market.name : "",
         currency: q.currency || (exchangeMapping ? exchangeMapping.market.currency : ""),
         assetType: q.quoteType,
+        tradingViewSymbol: buildTradingViewSymbol(q.symbol, q.exchange),
       });
 
       if (formatted.length >= 10) break;

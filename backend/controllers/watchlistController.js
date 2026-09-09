@@ -1,9 +1,16 @@
 const { WatchlistModel } = require("../model/WatchlistModel");
+const { buildTradingViewSymbol } = require("../config/yahooExchanges");
 
 const getWatchlist = async (req, res) => {
   try {
     const watchlist = await WatchlistModel.find({ user: req.user._id }).sort({ _id: -1 });
-    res.json(watchlist);
+    // Re-compute tradingViewSymbol on every load so stale DB values are auto-corrected
+    // (e.g. if a stock was added before a correction was added to yahooExchanges.js)
+    const enriched = watchlist.map(item => ({
+      ...item.toObject(),
+      tradingViewSymbol: buildTradingViewSymbol(item.symbol, item.exchange),
+    }));
+    res.json(enriched);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch watchlist" });
   }
@@ -11,8 +18,8 @@ const getWatchlist = async (req, res) => {
 
 const addToWatchlist = async (req, res) => {
   try {
-    const { name, symbol } = req.body;
-    const existing = await WatchlistModel.findOne({ user: req.user._id, name });
+    const { name, symbol, currency, exchange, market, tradingViewSymbol } = req.body;
+    const existing = await WatchlistModel.findOne({ user: req.user._id, symbol });
     
     if (existing) {
       return res.status(400).json({ message: "Stock already in watchlist" });
@@ -21,7 +28,11 @@ const addToWatchlist = async (req, res) => {
     const newEntry = new WatchlistModel({
       user: req.user._id,
       name,
-      symbol
+      symbol,
+      currency:          currency          || "INR",
+      exchange:          exchange          || "",
+      market:            market            || "",
+      tradingViewSymbol: tradingViewSymbol || "",
     });
     
     await newEntry.save();

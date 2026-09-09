@@ -55,29 +55,33 @@ const WatchList = () => {
   };
 
   const addStockToWatchlist = async (stockData) => {
-    // stockData is now a canonical normalized asset from the search API
     const symbol = stockData.symbol;
     const name = stockData.name || symbol;
     if (!liveWatchlist.find((s) => s.symbol === symbol)) {
       try {
         const { data } = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/watchlist`, {
-          name: name,
-          symbol: symbol
+          name,
+          symbol,
+          currency:          stockData.currency          || "INR",
+          exchange:          stockData.exchange          || "",
+          market:            stockData.market            || "",
+          tradingViewSymbol: stockData.tradingViewSymbol || "",
         });
 
         setLiveWatchlist((prev) => [
           {
-            _id: data._id,
-            name: name,
-            symbol: symbol,
-            market: stockData.market || "",
-            exchange: stockData.exchange || "",
-            marketStatus: "UNKNOWN",
-            price: 0,
-            nativePrice: 0,
-            currency: stockData.currency || 'INR',
-            percent: "0.00%",
-            isDown: false,
+            _id:               data._id,
+            name,
+            symbol,
+            market:            stockData.market            || "",
+            exchange:          stockData.exchange          || "",
+            tradingViewSymbol: stockData.tradingViewSymbol || "",
+            marketStatus:      "UNKNOWN",
+            price:             0,
+            nativePrice:       0,
+            currency:          stockData.currency          || "INR",
+            percent:           "0.00%",
+            isDown:            false,
           },
           ...prev,
         ]);
@@ -93,17 +97,18 @@ const WatchList = () => {
     axios.get(`${process.env.REACT_APP_BACKEND_URL}/watchlist`)
       .then(res => {
         const savedList = res.data.map(item => ({
-          _id: item._id,
-          name: item.name,
-          symbol: item.symbol,
-          market: "",
-          exchange: "",
-          marketStatus: "UNKNOWN",
-          price: 0,
-          nativePrice: 0,
-          currency: 'INR',
-          percent: "0.00%",
-          isDown: false,
+          _id:               item._id,
+          name:              item.name,
+          symbol:            item.symbol,
+          currency:          item.currency          || "INR",
+          exchange:          item.exchange          || "",
+          market:            item.market            || "",
+          tradingViewSymbol: item.tradingViewSymbol  || "",
+          marketStatus:      "UNKNOWN",
+          price:             0,
+          nativePrice:       0,
+          percent:           "0.00%",
+          isDown:            false,
         }));
 
         if (savedList.length === 0) {
