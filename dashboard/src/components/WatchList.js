@@ -126,33 +126,48 @@ const WatchList = () => {
     const symbolArray = watchListSymbols.split(",");
     const symbolsJoined = watchListSymbols;
 
-    // 1. Initial Data Fetch
-    const fetchQuotes = async () => {
+    // Retry fetch with exponential backoff.
+    // When the backend resumes after suspension, the Yahoo Finance warmup
+    // takes 10-40s. Without retry, a [] response leaves the list at 0 forever.
+    let retryTimer = null;
+    const fetchQuotes = async (attempt = 1) => {
       try {
         const { data: liveDataArray } = await axios.get(
           `${process.env.REACT_APP_BACKEND_URL}/quotes?symbols=${symbolsJoined}`
         );
 
-        setLiveWatchlist((prevWatchlist) =>
-          prevWatchlist.map((stock) => {
-            const liveStock = liveDataArray.find(
-              (q) => q.name === (stock.symbol || stock.name + ".NS")
-            );
-            if (liveStock) {
-              return {
-                ...stock,
-                price: liveStock.price,
-                nativePrice: liveStock.nativePrice || liveStock.price,
-                currency: liveStock.currency || 'INR',
-                percent: liveStock.percent,
-                isDown: liveStock.isDown,
-              };
-            }
-            return stock;
-          })
-        );
+        if (liveDataArray && liveDataArray.length > 0) {
+          setLiveWatchlist((prevWatchlist) =>
+            prevWatchlist.map((stock) => {
+              const liveStock = liveDataArray.find(
+                (q) => q.name === (stock.symbol || stock.name + ".NS")
+              );
+              if (liveStock) {
+                return {
+                  ...stock,
+                  price: liveStock.price,
+                  nativePrice: liveStock.nativePrice || liveStock.price,
+                  currency: liveStock.currency || 'INR',
+                  percent: liveStock.percent,
+                  isDown: liveStock.isDown,
+                };
+              }
+              return stock;
+            })
+          );
+        } else if (attempt <= 6) {
+          // Backend returned [] — warmup not done yet, retry
+          const delay = Math.min(4000 * attempt, 20000);
+          retryTimer = setTimeout(() => fetchQuotes(attempt + 1), delay);
+        }
       } catch (err) {
-        console.error("Failed to fetch live quotes", err);
+        if (attempt <= 6) {
+          // Backend still waking up — retry with backoff
+          const delay = Math.min(4000 * attempt, 20000);
+          retryTimer = setTimeout(() => fetchQuotes(attempt + 1), delay);
+        } else {
+          console.error("Failed to fetch live quotes after retries.", err);
+        }
       }
     };
 
@@ -183,10 +198,15 @@ const WatchList = () => {
       socket.on("price_update", handlePriceUpdate);
 
       return () => {
+        if (retryTimer) clearTimeout(retryTimer);
         socket.off("price_update", handlePriceUpdate);
         socket.emit("unsubscribe", symbolArray);
       };
     }
+
+    return () => {
+      if (retryTimer) clearTimeout(retryTimer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchListSymbols, socket]);
 

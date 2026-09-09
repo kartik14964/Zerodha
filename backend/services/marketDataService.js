@@ -27,15 +27,17 @@ let USD_TO_INR_RATE = 84.0;
 let ioRef = null;
 
 // ---------------------------------------------------------------------------
-// Warm up yahoo-finance2 on startup.
-// The library acquires a cookie/crumb from Yahoo Finance on its very first
-// call. After a backend restart (e.g. Render resuming from suspension), this
-// first request often fails or is slow. We pre-warm it immediately so the
-// crumb is ready before any real user request arrives.
+// warmupReady — gates ALL Yahoo Finance calls until the crumb is acquired.
+// Without this, fetchAndBroadcast (every 5s) and getInitialQuotes (per user)
+// all fire simultaneously on startup, causing a burst that triggers 429.
+// Only ONE crumb request (the warmup) goes to Yahoo; everything else waits.
 // ---------------------------------------------------------------------------
+let warmupReady = false;
+
 const warmupYahooFinance = async (attempt = 1) => {
   try {
     await yahooFinance.quote("INR=X");
+    warmupReady = true;
     console.log("✅ Yahoo Finance warmed up successfully.");
   } catch (err) {
     if (attempt <= 8) {
@@ -45,8 +47,10 @@ const warmupYahooFinance = async (attempt = 1) => {
       );
       setTimeout(() => warmupYahooFinance(attempt + 1), delay);
     } else {
+      // Give up gating — let requests through and hope the crumb resolves
+      warmupReady = true;
       console.error(
-        "❌ Yahoo Finance warmup failed after 8 attempts. Quotes may be delayed on first load."
+        "❌ Yahoo Finance warmup failed after 8 attempts. Proceeding anyway."
       );
     }
   }
@@ -54,9 +58,10 @@ const warmupYahooFinance = async (attempt = 1) => {
 
 const initMarketDataService = (io) => {
   ioRef = io;
-  // Kick off warmup immediately on startup
+  warmupReady = false;
+  // Kick off warmup — all other Yahoo calls wait until this succeeds
   warmupYahooFinance();
-  // Poll every 5s — browser headers reduce rate-limit risk on Render
+  // Poll every 5s — gated by warmupReady so no burst on startup
   setInterval(fetchAndBroadcast, 5000);
 };
 
@@ -86,7 +91,6 @@ const removeSymbols = (symbols) => {
 // Helper: fetch a batch of symbols using quote() and update cache + FX rate.
 // ---------------------------------------------------------------------------
 const fetchBatch = async (symbolsToFetch) => {
-  // Always include INR=X so we have a live FX rate
   const batch = symbolsToFetch.includes("INR=X")
     ? symbolsToFetch
     : [...symbolsToFetch, "INR=X"];
@@ -94,13 +98,12 @@ const fetchBatch = async (symbolsToFetch) => {
   const quotes = await yahooFinance.quote(batch);
   const results = Array.isArray(quotes) ? quotes : [quotes];
 
-  // 1. Update FX rate
+  // Update FX rate
   const fxQuote = results.find((q) => q.symbol === "INR=X");
   if (fxQuote && fxQuote.regularMarketPrice) {
     USD_TO_INR_RATE = fxQuote.regularMarketPrice;
   }
 
-  // 2. Process each symbol
   const formatted = [];
   results.forEach((q) => {
     if (q.symbol === "INR=X") return;
@@ -128,9 +131,11 @@ const fetchBatch = async (symbolsToFetch) => {
 };
 
 // ---------------------------------------------------------------------------
-// Polling loop — broadcast live prices to subscribed WebSocket clients
+// Polling loop — broadcast live prices to subscribed WebSocket clients.
+// Skips entirely until warmup is done to avoid startup burst.
 // ---------------------------------------------------------------------------
 const fetchAndBroadcast = async () => {
+  if (!warmupReady) return; // wait for crumb to be ready
   if (symbolCounts.size === 0) return;
 
   const symbolsToFetch = Array.from(symbolCounts.keys());
@@ -143,18 +148,23 @@ const fetchAndBroadcast = async () => {
       }
     });
   } catch (err) {
-    // On failure (e.g. 429) the cache retains the last known state.
     console.error("Market Data Fetch Error (cache retained):", err.message);
   }
 };
 
 // ---------------------------------------------------------------------------
-// Initial quote fetch — called when a client connects and needs current prices
+// Initial quote fetch — called when a client connects and needs current prices.
+// Returns [] if warmup hasn't finished yet (frontend will retry).
 // ---------------------------------------------------------------------------
 const getInitialQuotes = async (symbols) => {
   if (!symbols || symbols.length === 0) return [];
 
-  // Only fetch symbols not already cached
+  // Return empty if warmup isn't done — frontend retry logic will re-request
+  if (!warmupReady) {
+    console.log("Warmup not ready yet, returning [] for frontend retry.");
+    return [];
+  }
+
   const missing = symbols.filter((s) => !cache.has(s));
 
   if (missing.length > 0) {
