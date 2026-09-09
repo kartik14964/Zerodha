@@ -151,7 +151,7 @@ const Menu = () => {
           </li>
           {/* Profile avatar as the last nav item — perfectly matching the standard li structure */}
           <li ref={profileRef} className="profile-nav-item" onClick={handleProfileClick} style={{ cursor: "pointer" }}>
-            <a href="#" onClick={(e) => e.preventDefault()} style={{ textDecoration: "none" }}>
+            <div style={{ textDecoration: "none" }}>
               <div className={menuClass} style={{ borderLeft: 'none' }}>
                 <div className="avatar" style={{
                   margin: '-2px 0', /* 24px visual height - 4px margin = 20px layout height (matches FA icons perfectly) */
@@ -171,7 +171,7 @@ const Menu = () => {
                 <p className="username">{username}</p>
                 <p className="mobile-profile-label">Profile</p>
               </div>
-            </a>
+            </div>
 
 
 
