@@ -62,7 +62,7 @@ const WatchList = () => {
           name: cleanName,
           symbol: stockData.name
         });
-        
+
         setLiveWatchlist((prev) => [
           {
             _id: data._id,
@@ -97,7 +97,7 @@ const WatchList = () => {
           percent: "0.00%",
           isDown: false,
         }));
-        
+
         if (savedList.length === 0) {
           const defaultStocks = [
             { name: "RELIANCE", symbol: "RELIANCE.NS", price: 0, percent: "0.00%", isDown: false },
@@ -204,20 +204,20 @@ const WatchList = () => {
           className="search"
         />
         <span className="counts"> {liveWatchlist.length}</span>
-        
+
         {searchResults.length > 0 && (
           <ul className="search-results" style={{
-            position: "absolute", top: "100%", left: 0, right: 0, 
-            background: "#fff", zIndex: 10, listStyle: "none", 
-            padding: 0, margin: 0, border: "1px solid #ddd", 
+            position: "absolute", top: "100%", left: 0, right: 0,
+            background: "#fff", zIndex: 10, listStyle: "none",
+            padding: 0, margin: 0, border: "1px solid #ddd",
             borderRadius: "4px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
           }}>
             {searchResults.map((result, i) => (
-              <li 
-                key={i} 
+              <li
+                key={i}
                 onClick={() => addStockToWatchlist(result)}
                 style={{
-                  padding: "10px 15px", borderBottom: "1px solid #eee", 
+                  padding: "10px 15px", borderBottom: "1px solid #eee",
                   cursor: "pointer", display: "flex", justifyContent: "space-between",
                   alignItems: "center"
                 }}
@@ -227,7 +227,7 @@ const WatchList = () => {
                   <span style={{ fontSize: "11px", color: "#888" }}>{result.longName}</span>
                 </div>
                 <button style={{
-                  background: "#4a90e2", color: "white", border: "none", 
+                  background: "#4a90e2", color: "white", border: "none",
                   borderRadius: "3px", padding: "4px 8px", cursor: "pointer"
                 }}>+</button>
               </li>
@@ -239,9 +239,9 @@ const WatchList = () => {
         {liveWatchlist.map((stock, index) => {
           const stockId = stock._id || index;
           return (
-            <WatchListItem 
-              stock={stock} 
-              key={stockId} 
+            <WatchListItem
+              stock={stock}
+              key={stockId}
               isActive={activeStockId === stockId}
               onToggle={() => setActiveStockId(activeStockId === stockId ? null : stockId)}
               removeStockFromWatchlist={removeStockFromWatchlist}
@@ -274,8 +274,8 @@ const WatchListItem = ({ stock, removeStockFromWatchlist, isActive, onToggle }) 
   }, [stock.nativePrice]);
 
   return (
-    <li 
-      className={`${flashClass} ${isActive ? "show-actions active" : ""}`} 
+    <li
+      className={`${flashClass} ${isActive ? "show-actions active" : ""}`}
       onClick={onToggle}
     >
       <div className="item">
@@ -289,8 +289,8 @@ const WatchListItem = ({ stock, removeStockFromWatchlist, isActive, onToggle }) 
             <KeyboardArrowUp className="up" />
           )}
           <span className={`price ${stock.isDown ? "down" : "up"}`}>
-            {stock.price === 0 
-              ? "..." 
+            {stock.price === 0
+              ? "..."
               : formatCurrency(stock.nativePrice || stock.price, stock.currency || 'INR')}
           </span>
         </div>
@@ -300,7 +300,7 @@ const WatchListItem = ({ stock, removeStockFromWatchlist, isActive, onToggle }) 
   );
 };
 
-const WatchlistActions = ({stock, removeStockFromWatchlist}) => {
+const WatchlistActions = ({ stock, removeStockFromWatchlist }) => {
   const { openBuyWindow, openSellWindow, openChartWindow } = useContext(GeneralContext);
 
   return (

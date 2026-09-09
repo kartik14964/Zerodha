@@ -1,32 +1,78 @@
 const YahooFinance = require("yahoo-finance2").default;
-const yahooFinance = new YahooFinance();
+
+// Configure yahoo-finance2 with a realistic browser User-Agent.
+// When deployed on cloud platforms like Render, Yahoo Finance blocks requests
+// that look like automated server traffic (returning 429). A browser User-Agent
+// significantly reduces the chance of being flagged and rate-limited.
+const yahooFinance = new YahooFinance({
+  suppressNotices: ["yahooSurvey"],
+  fetchOptions: {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+  },
+});
 
 // Active symbols and their active subscriber count across all clients
 const symbolCounts = new Map();
 // The last known good price state (In-Memory Cache)
 const cache = new Map();
 
-// Exchange rate mapping (Starts with a default fallback, updates every 2 seconds)
-let USD_TO_INR_RATE = 83.5;
+// Exchange rate mapping (starts with a safe fallback, updated every poll)
+let USD_TO_INR_RATE = 84.0;
 
 let ioRef = null;
 
+// ---------------------------------------------------------------------------
+// Warm up yahoo-finance2 on startup.
+// The library acquires a cookie/crumb from Yahoo Finance on its very first
+// call. After a backend restart (e.g. Render resuming from suspension), this
+// first request often fails or is slow. We pre-warm it immediately so the
+// crumb is ready before any real user request arrives.
+// ---------------------------------------------------------------------------
+const warmupYahooFinance = async (attempt = 1) => {
+  try {
+    await yahooFinance.quoteCombine(["INR=X"]);
+    console.log("✅ Yahoo Finance warmed up successfully.");
+  } catch (err) {
+    if (attempt <= 8) {
+      const delay = Math.min(5000 * attempt, 30000); // 5s, 10s, 15s … max 30s
+      console.warn(
+        `⚠️  Yahoo Finance warmup failed (attempt ${attempt}/8), retrying in ${delay / 1000}s — ${err.message}`
+      );
+      setTimeout(() => warmupYahooFinance(attempt + 1), delay);
+    } else {
+      console.error(
+        "❌ Yahoo Finance warmup failed after 8 attempts. Quotes may be delayed on first load."
+      );
+    }
+  }
+};
+
 const initMarketDataService = (io) => {
   ioRef = io;
-  // Poll Yahoo Finance every 5 seconds for a closer to "real-time" feel (Note: Risks rate-limiting)
+  // Kick off warmup immediately on startup
+  warmupYahooFinance();
+  // Poll every 5s — same as original; browser headers make this safe on Render
   setInterval(fetchAndBroadcast, 5000);
 };
 
+// ---------------------------------------------------------------------------
+// Symbol subscription management
+// ---------------------------------------------------------------------------
 const addSymbols = (symbols) => {
   if (!symbols) return;
-  symbols.forEach(symbol => {
+  symbols.forEach((symbol) => {
     symbolCounts.set(symbol, (symbolCounts.get(symbol) || 0) + 1);
   });
 };
 
 const removeSymbols = (symbols) => {
   if (!symbols) return;
-  symbols.forEach(symbol => {
+  symbols.forEach((symbol) => {
     const count = symbolCounts.get(symbol) || 0;
     if (count <= 1) {
       symbolCounts.delete(symbol);
@@ -36,102 +82,101 @@ const removeSymbols = (symbols) => {
   });
 };
 
+// ---------------------------------------------------------------------------
+// Helper: fetch a batch of symbols using quoteCombine (handles partial failures
+// better than quote()) and update the in-memory cache + FX rate.
+// ---------------------------------------------------------------------------
+const fetchBatch = async (symbolsToFetch) => {
+  // Always include INR=X so we have a live FX rate
+  const batch = symbolsToFetch.includes("INR=X")
+    ? symbolsToFetch
+    : [...symbolsToFetch, "INR=X"];
+
+  // quoteCombine returns a Record<symbol, QuoteResult> and gracefully handles
+  // symbols that fail individually without aborting the whole batch.
+  const resultsMap = await yahooFinance.quoteCombine(batch);
+
+  // 1. Update FX rate
+  const fxResult = resultsMap["INR=X"];
+  if (fxResult && fxResult.regularMarketPrice) {
+    USD_TO_INR_RATE = fxResult.regularMarketPrice;
+  }
+
+  // 2. Process each symbol
+  const formatted = [];
+  for (const [symbol, q] of Object.entries(resultsMap)) {
+    if (symbol === "INR=X") continue;
+    if (!q || !q.regularMarketPrice) continue; // skip if Yahoo returned no price
+
+    let finalPrice = q.regularMarketPrice;
+    if (q.currency === "USD") {
+      finalPrice = finalPrice * USD_TO_INR_RATE;
+    }
+
+    const entry = {
+      name: symbol,
+      price: finalPrice,
+      nativePrice: q.regularMarketPrice,
+      currency: q.currency || "INR",
+      percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
+      isDown: (q.regularMarketChangePercent || 0) < 0,
+    };
+
+    cache.set(symbol, entry);
+    formatted.push(entry);
+  }
+
+  return formatted;
+};
+
+// ---------------------------------------------------------------------------
+// Polling loop — broadcast live prices to subscribed WebSocket clients
+// ---------------------------------------------------------------------------
 const fetchAndBroadcast = async () => {
   if (symbolCounts.size === 0) return;
-  
+
   const symbolsToFetch = Array.from(symbolCounts.keys());
-  
-  // Always include the live Forex rate in our batch request
-  if (!symbolsToFetch.includes("INR=X")) {
-    symbolsToFetch.push("INR=X");
-  }
-  
+
   try {
-    const quotes = await yahooFinance.quote(symbolsToFetch);
-    const results = Array.isArray(quotes) ? quotes : [quotes];
-    
-    // 1. Extract and update the FX rate first
-    const fxQuote = results.find(q => q.symbol === "INR=X");
-    if (fxQuote && fxQuote.regularMarketPrice) {
-      USD_TO_INR_RATE = fxQuote.regularMarketPrice;
-    }
-    
-    // 2. Process and broadcast the actual stocks
-    results.forEach(q => {
-      // Don't broadcast the raw FX pair to the frontend watchlist
-      if (q.symbol === "INR=X") return; 
+    const results = await fetchBatch(symbolsToFetch);
 
-      let finalPrice = q.regularMarketPrice || 0;
-      if (q.currency === "USD") {
-        finalPrice = finalPrice * USD_TO_INR_RATE;
-      }
-
-      const formatted = {
-        name: q.symbol,
-        price: finalPrice, // INR Execution Price
-        nativePrice: q.regularMarketPrice || 0, // Native Display Price
-        currency: q.currency || "INR",
-        percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
-        isDown: (q.regularMarketChangePercent || 0) < 0
-      };
-      
-      // Update Cache
-      cache.set(q.symbol, formatted);
-      
-      // Broadcast precisely to clients in this symbol's room
+    results.forEach((entry) => {
       if (ioRef) {
-        ioRef.to(`stock:${q.symbol}`).emit("price_update", formatted);
+        ioRef.to(`stock:${entry.name}`).emit("price_update", entry);
       }
     });
   } catch (err) {
-    console.error("Market Data Fetch Error (Retaining cached state):", err);
-    // On failure, cache retains the last known state, and clients just see unchanged prices.
+    // On failure (e.g. 429) the cache retains the last known state.
+    // Clients will see unchanged prices until the next successful poll.
+    console.error("Market Data Fetch Error (cache retained):", err.message);
   }
 };
 
+// ---------------------------------------------------------------------------
+// Initial quote fetch — called when a client connects and needs current prices
+// ---------------------------------------------------------------------------
 const getInitialQuotes = async (symbols) => {
   if (!symbols || symbols.length === 0) return [];
 
-  // Identify symbols not yet in cache
-  const missing = symbols.filter(s => !cache.has(s));
-  
+  // Only fetch symbols not already cached
+  const missing = symbols.filter((s) => !cache.has(s));
+
   if (missing.length > 0) {
-    if (!missing.includes("INR=X")) missing.push("INR=X");
-    
     try {
-      const quotes = await yahooFinance.quote(missing);
-      const results = Array.isArray(quotes) ? quotes : [quotes];
-      
-      const fxQuote = results.find(q => q.symbol === "INR=X");
-      if (fxQuote && fxQuote.regularMarketPrice) {
-        USD_TO_INR_RATE = fxQuote.regularMarketPrice;
-      }
-
-      results.forEach(q => {
-        if (q.symbol === "INR=X") return;
-
-        let finalPrice = q.regularMarketPrice || 0;
-        if (q.currency === "USD") {
-           finalPrice = finalPrice * USD_TO_INR_RATE;
-        }
-
-        const formatted = {
-          name: q.symbol,
-          price: finalPrice,
-          nativePrice: q.regularMarketPrice || 0,
-          currency: q.currency || "INR",
-          percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
-          isDown: (q.regularMarketChangePercent || 0) < 0
-        };
-        cache.set(q.symbol, formatted);
-      });
+      await fetchBatch(missing);
     } catch (err) {
-       console.error("Error fetching initial quotes:", err);
+      console.error("Error fetching initial quotes:", err.message);
+      // Cache may be partially populated; return what we have
     }
   }
-  
-  // Return cached versions for all requested symbols
-  return symbols.map(s => cache.get(s)).filter(Boolean);
+
+  return symbols.map((s) => cache.get(s)).filter(Boolean);
 };
 
-module.exports = { initMarketDataService, addSymbols, removeSymbols, getInitialQuotes, cache };
+module.exports = {
+  initMarketDataService,
+  addSymbols,
+  removeSymbols,
+  getInitialQuotes,
+  cache,
+};

@@ -8,12 +8,12 @@ const ProtectedRoute = ({ children }) => {
   let token = localStorage.getItem("token");
   const urlParams = new URLSearchParams(window.location.search);
   const urlToken = urlParams.get("token");
-  
+
   // 2. If a token arrived via the URL, grab it and hide it!
   if (urlToken) {
     localStorage.setItem("token", urlToken);
-    token = urlToken; 
-    
+    token = urlToken;
+
     // Instantly scrub the token from the address bar so the user never sees it
     window.history.replaceState({}, document.title, window.location.pathname);
   }
