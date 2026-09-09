@@ -1,4 +1,4 @@
-const { normalizeYahooExchange } = require("../config/yahooExchanges");
+const { normalizeYahooExchange, buildTradingViewSymbol } = require("../config/yahooExchanges");
 
 /**
  * Normalizes a Yahoo Finance quote/search result into our canonical asset representation.
@@ -18,6 +18,7 @@ const normalizeStock = (yahooResult) => {
     currency: yahooResult.currency || exchangeMapping.market.currency,
     timezone: exchangeMapping.market.timezone,
     assetType: yahooResult.quoteType || "EQUITY",
+    tradingViewSymbol: buildTradingViewSymbol(yahooResult.symbol, yahooResult.exchange),
   };
 };
 

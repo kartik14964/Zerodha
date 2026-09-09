@@ -1,5 +1,5 @@
 const YahooFinance = require("yahoo-finance2").default;
-const { normalizeYahooExchange } = require("../config/yahooExchanges");
+const { normalizeYahooExchange, buildTradingViewSymbol } = require("../config/yahooExchanges");
 
 // Configure yahoo-finance2 with a realistic browser User-Agent.
 const yahooFinance = new YahooFinance({
@@ -102,6 +102,7 @@ const fetchBatch = async (symbolsToFetch) => {
         currency: q.currency || "INR",
         market: market,
         exchange: exchange,
+        tradingViewSymbol: buildTradingViewSymbol(q.symbol, q.exchange), // pre-computed for TradingView
         marketStatus: marketStatus,   // "OPEN" | "CLOSED" | "PRE" | "POST"
         percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
         isDown: (q.regularMarketChangePercent || 0) < 0,

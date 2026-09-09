@@ -22,7 +22,19 @@ const MARKETS = {
     exchanges: ["LSE"],
     currency: "GBP",
     timezone: "Europe/London",
-  }
+  },
+  EUROPE: {
+    name: "EUROPE",
+    exchanges: ["XETR", "EURONEXT", "SIX", "MIL", "BME"],
+    currency: "EUR",
+    timezone: "Europe/Paris",
+  },
+  CRYPTO: {
+    name: "CRYPTO",
+    exchanges: ["CCC"],
+    currency: "USD",
+    timezone: "UTC",
+  },
 };
 
 module.exports = { MARKETS };

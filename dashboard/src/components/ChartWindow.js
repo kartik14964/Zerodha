@@ -6,49 +6,23 @@ import "./ChartWindow.css";
 const ChartWindow = ({ stock }) => {
   const { closeWindow } = useContext(GeneralContext);
 
-  // Format symbol for TradingView (Yahoo Finance -> TradingView)
-  const getTradingViewSymbol = (name) => {
-    let cleanName = (name || "").toUpperCase();
-    
-    // Indices
-    if (cleanName === "^NSEI") return "NSE:NIFTY";
-    if (cleanName === "^BSESN") return "BSE:SENSEX";
-    if (cleanName === "^NSEBANK") return "NSE:BANKNIFTY";
-
-    // Crypto (e.g. BTC-USD -> CRYPTO:BTCUSD)
-    if (cleanName.endsWith("-USD")) {
-      return `CRYPTO:${cleanName.replace("-USD", "USD")}`;
-    }
-
-    // Indian Stocks with Yahoo suffixes
-    if (cleanName.endsWith(".NS")) {
-      return `BSE:${cleanName.replace(".NS", "")}`;
-    }
-    if (cleanName.endsWith(".BO")) {
-      return `BSE:${cleanName.replace(".BO", "")}`;
-    }
-
-    // German Stocks (.DE -> XETRA)
-    if (cleanName.endsWith(".DE")) {
-      return `XETR:${cleanName.replace(".DE", "")}`;
-    }
-    
-    // London Stocks (.L -> LSE)
-    if (cleanName.endsWith(".L")) {
-      return `LSE:${cleanName.replace(".L", "")}`;
-    }
-
-    // Legacy data.js hardcoded Indian stocks without suffix
-    const legacyIndianStocks = ["INFY", "ONGC", "TCS", "ITC", "RELIANCE", "WIPRO", "HDFCBANK", "SBIN", "BHARTIARTL"];
-    if (legacyIndianStocks.includes(cleanName)) {
-      return `BSE:${cleanName}`;
-    }
-
-    // Default for US stocks like AAPL, MSFT, etc. TradingView resolves them automatically
-    return cleanName;
+  // tradingViewSymbol is pre-computed on the backend from Yahoo's raw exchange code.
+  // Fallback: derive from symbol suffix for old DB records that predate this field.
+  const getTvSymbolFallback = (sym) => {
+    const s = (sym || "").toUpperCase();
+    if (s === "^NSEI")    return "NSE:NIFTY";
+    if (s === "^BSESN")   return "BSE:SENSEX";
+    if (s.endsWith("-USD")) return `CRYPTO:${s.replace("-USD","USD")}`;
+    if (s.endsWith(".NS")) return `NSE:${s.slice(0,-3)}`;
+    if (s.endsWith(".BO")) return `BSE:${s.slice(0,-3)}`;
+    if (s.endsWith(".L"))  return `LSE:${s.slice(0,-2)}`;
+    if (s.endsWith(".DE")) return `XETR:${s.slice(0,-3)}`;
+    if (s.endsWith(".SW")) return `SIX:${s.slice(0,-3)}`;
+    if (s.endsWith(".T"))  return `TSE:${s.slice(0,-2)}`;
+    return s;
   };
 
-  const symbol = getTradingViewSymbol(stock.symbol || stock.name);
+  const symbol = stock.tradingViewSymbol || getTvSymbolFallback(stock.symbol || stock.name);
 
   return (
     <div className="chart-container" id="chart-window">

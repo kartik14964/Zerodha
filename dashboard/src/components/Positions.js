@@ -7,8 +7,6 @@ import { Skeleton } from "@mui/material";
 
 import { formatCurrency } from "../utils/currencyFormatter";
 
-const formatINR = (value) => formatCurrency(value, "INR");
-
 const Positions = () => {
   const [allPositions, setAllPositions] = useState([]);
   const [livePrices, setLivePrices] = useState({});
@@ -138,7 +136,6 @@ const Positions = () => {
               const pnlPercent = avg > 0 ? ((ltp - avg) / avg) * 100 : 0;
 
               const profClass = profitLoss >= 0 ? "profit" : "loss";
-              const nativePrice = liveData?.nativePrice;
               const currency = liveData?.currency || "INR";
               
               return (

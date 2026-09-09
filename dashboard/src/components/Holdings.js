@@ -178,7 +178,6 @@ const Holdings = () => {
                 const dayClass = isDown ? "loss" : "profit";
                 const percent = liveData?.percent || "0.00%";
                 
-                const nativePrice = liveData?.nativePrice;
                 const currency = liveData?.currency || "INR";
 
                 return (
