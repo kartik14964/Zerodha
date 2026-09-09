@@ -206,6 +206,14 @@ code {
   text-align: left;
 }
 
+.profit {
+  color: rgb(72, 194, 55) !important;
+}
+
+.loss {
+  color: rgb(250, 118, 78) !important;
+}
+
 .order-table td.profit {
   color: rgb(72, 194, 55);
 }
