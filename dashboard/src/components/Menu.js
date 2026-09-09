@@ -151,13 +151,13 @@ const Menu = () => {
           </li>
           {/* Profile avatar as the last nav item — perfectly matching the standard li structure */}
           <li ref={profileRef} className="profile-nav-item" onClick={handleProfileClick} style={{ cursor: "pointer" }}>
-            <a style={{ textDecoration: "none" }}>
+            <a href="#" onClick={(e) => e.preventDefault()} style={{ textDecoration: "none" }}>
               <div className={menuClass} style={{ borderLeft: 'none' }}>
-                <div className="avatar" style={{ 
+                <div className="avatar" style={{
                   margin: '-2px 0', /* 24px visual height - 4px margin = 20px layout height (matches FA icons perfectly) */
-                  width: '24px', 
-                  height: '24px', 
-                  fontSize: '0.65rem', 
+                  width: '24px',
+                  height: '24px',
+                  fontSize: '0.65rem',
                   minHeight: 'auto',
                   display: 'flex',
                   alignItems: 'center',
