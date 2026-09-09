@@ -94,7 +94,7 @@ const buildTradingViewSymbol = (yahooSymbol, yahooExchangeCode) => {
   if (sym === "^NSEBANK") return "NSE:BANKNIFTY";
 
   // Crypto: BTC-USD -> CRYPTO:BTCUSD
-  const mapping = YAHOO_EXCHANGE_MAP[yahooExchangeCode];
+  const mapping = normalizeYahooExchange(yahooExchangeCode);
   if (mapping && mapping.tvPrefix === "CRYPTO") {
     return `CRYPTO:${sym.replace("-USD", "USD").replace("-", "")}`;
   }
@@ -128,7 +128,22 @@ const buildTradingViewSymbol = (yahooSymbol, yahooExchangeCode) => {
 };
 
 const normalizeYahooExchange = (exchangeCode) => {
-  return YAHOO_EXCHANGE_MAP[exchangeCode] || null;
+  if (!exchangeCode) return null;
+  
+  const mapped = YAHOO_EXCHANGE_MAP[exchangeCode];
+  if (mapped) return mapped;
+
+  // Dynamic fallback for any unknown global exchange
+  return {
+    market: {
+      name: "GLOBAL",
+      exchanges: [exchangeCode],
+      currency: "USD", // Safe fallback; Yahoo's q.currency will override this in most places
+      timezone: "UTC",
+    },
+    exchange: exchangeCode,
+    tvPrefix: exchangeCode, // Often TradingView accepts the raw Yahoo exchange code as a prefix
+  };
 };
 
 module.exports = { YAHOO_EXCHANGE_MAP, normalizeYahooExchange, buildTradingViewSymbol };
