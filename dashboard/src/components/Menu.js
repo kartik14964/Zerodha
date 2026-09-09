@@ -152,9 +152,14 @@ const Menu = () => {
           {/* Profile avatar as the last nav item — perfectly matching the standard li structure */}
           <li ref={profileRef} className="profile-nav-item" onClick={handleProfileClick} style={{ cursor: "pointer" }}>
             <div style={{ textDecoration: "none" }}>
-              <div className={menuClass} style={{ borderLeft: 'none' }}>
+              <div className={menuClass} style={{
+                borderLeft: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
                 <div className="avatar" style={{
-                  margin: '-2px 0', /* 24px visual height - 4px margin = 20px layout height (matches FA icons perfectly) */
+                  margin: '0',
                   width: '24px',
                   height: '24px',
                   fontSize: '0.65rem',
@@ -164,7 +169,8 @@ const Menu = () => {
                   justifyContent: 'center',
                   background: 'rgb(252, 229, 252)',
                   color: 'rgb(221, 139, 221)',
-                  borderRadius: '100%'
+                  borderRadius: '100%',
+                  flexShrink: '0'
                 }}>
                   {username.substring(0, 2).toUpperCase()}
                 </div>
@@ -214,7 +220,7 @@ const Menu = () => {
 
         </ul>
       </div>
-    </div>
+    </div >
   );
 };
 

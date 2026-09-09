@@ -308,6 +308,10 @@ hr {
   margin-left: 20px;
   margin-right: 9px;
   position: relative;
+  justify-content: center;
+  /* was: space-evenly */
+  gap: 8px;
+  vertical-align: middle;
 }
 
 .profile .avatar {
@@ -325,6 +329,9 @@ hr {
   display: flex;
   background: rgb(252, 229, 252);
   margin-right: 8px;
+  margin-right: 0;
+  /* was: 8px — now handled by gap */
+  flex-shrink: 0;
 }
 
 .profile-nav-item .username {
