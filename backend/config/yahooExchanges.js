@@ -146,19 +146,22 @@ const buildTradingViewSymbol = (yahooSymbol, yahooExchangeCode) => {
   }
 
   // Strip dot-suffix from ticker to get the clean base ticker
-  // e.g. "RELIANCE.NS" → "RELIANCE", "CELSIA.CL" → "CELSIA"
-  const ticker = sym.replace(/\.[A-Z]{1,4}$/, "");
+  // e.g. "RELIANCE.NS" → "RELIANCE", "CELSIA.CL" → "CELSIA", "0700.HK" → "0700"
+  let ticker = sym.replace(/\.[A-Z]{1,4}$/, "");
 
   // 3. Correct Yahoo's internal exchange code to TradingView prefix if they differ
   const tvPrefix = YAHOO_CODE_CORRECTIONS[exCode];
   if (tvPrefix) {
-    return `${tvPrefix}:${ticker}`;
+    // HK: Yahoo pads to 4 digits (0700, 0005) but TradingView uses unpadded (700, 5)
+    const cleanTicker = tvPrefix === "HKEX" ? ticker.replace(/^0+/, "") : ticker;
+    return `${tvPrefix}:${cleanTicker}`;
   }
 
   // 4. Suffix-based fallback (when exchange code isn't available, e.g. old DB records)
   for (const [suffix, prefix] of Object.entries(SUFFIX_TO_TV)) {
     if (sym.endsWith(suffix)) {
-      return `${prefix}:${ticker}`;
+      const cleanTicker = prefix === "HKEX" ? ticker.replace(/^0+/, "") : ticker;
+      return `${prefix}:${cleanTicker}`;
     }
   }
 
