@@ -55,22 +55,27 @@ const WatchList = () => {
   };
 
   const addStockToWatchlist = async (stockData) => {
-    const cleanName = stockData.name.replace(".NS", "").replace(".BO", "");
-    if (!liveWatchlist.find((s) => s.name === cleanName)) {
+    // stockData is now a canonical normalized asset from the search API
+    const symbol = stockData.symbol;
+    const name = stockData.name || symbol;
+    if (!liveWatchlist.find((s) => s.symbol === symbol)) {
       try {
         const { data } = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/watchlist`, {
-          name: cleanName,
-          symbol: stockData.name
+          name: name,
+          symbol: symbol
         });
 
         setLiveWatchlist((prev) => [
           {
             _id: data._id,
-            name: cleanName,
-            symbol: stockData.name,
+            name: name,
+            symbol: symbol,
+            market: stockData.market || "",
+            exchange: stockData.exchange || "",
+            marketStatus: "UNKNOWN",
             price: 0,
             nativePrice: 0,
-            currency: 'INR',
+            currency: stockData.currency || 'INR',
             percent: "0.00%",
             isDown: false,
           },
@@ -91,6 +96,9 @@ const WatchList = () => {
           _id: item._id,
           name: item.name,
           symbol: item.symbol,
+          market: "",
+          exchange: "",
+          marketStatus: "UNKNOWN",
           price: 0,
           nativePrice: 0,
           currency: 'INR',
@@ -100,16 +108,14 @@ const WatchList = () => {
 
         if (savedList.length === 0) {
           const defaultStocks = [
-            { name: "RELIANCE", symbol: "RELIANCE.NS", price: 0, percent: "0.00%", isDown: false },
-            { name: "TCS", symbol: "TCS.NS", price: 0, percent: "0.00%", isDown: false },
-            { name: "HDFCBANK", symbol: "HDFCBANK.NS", price: 0, percent: "0.00%", isDown: false },
-            { name: "INFY", symbol: "INFY.NS", price: 0, percent: "0.00%", isDown: false },
-            { name: "SBI", symbol: "SBIN.NS", price: 0, percent: "0.00%", isDown: false },
-            { name: "BTC-USD", symbol: "BTC-USD", price: 0, percent: "0.00%", isDown: false },
-            { name: "ETH-USD", symbol: "ETH-USD", price: 0, percent: "0.00%", isDown: false },
-            { name: "AAPL", symbol: "AAPL", price: 0, percent: "0.00%", isDown: false },
-            { name: "TSLA", symbol: "TSLA", price: 0, percent: "0.00%", isDown: false },
-            { name: "NIFTY 50", symbol: "^NSEI", price: 0, percent: "0.00%", isDown: false }
+            { name: "RELIANCE", symbol: "RELIANCE.NS", price: 0, percent: "0.00%", isDown: false, market: "", exchange: "", marketStatus: "UNKNOWN" },
+            { name: "TCS", symbol: "TCS.NS", price: 0, percent: "0.00%", isDown: false, market: "", exchange: "", marketStatus: "UNKNOWN" },
+            { name: "HDFCBANK", symbol: "HDFCBANK.NS", price: 0, percent: "0.00%", isDown: false, market: "", exchange: "", marketStatus: "UNKNOWN" },
+            { name: "INFY", symbol: "INFY.NS", price: 0, percent: "0.00%", isDown: false, market: "", exchange: "", marketStatus: "UNKNOWN" },
+            { name: "SBI", symbol: "SBIN.NS", price: 0, percent: "0.00%", isDown: false, market: "", exchange: "", marketStatus: "UNKNOWN" },
+            { name: "AAPL", symbol: "AAPL", price: 0, percent: "0.00%", isDown: false, market: "", exchange: "", marketStatus: "UNKNOWN" },
+            { name: "TSLA", symbol: "TSLA", price: 0, percent: "0.00%", isDown: false, market: "", exchange: "", marketStatus: "UNKNOWN" },
+            { name: "NIFTY 50", symbol: "^NSEI", price: 0, percent: "0.00%", isDown: false, market: "", exchange: "", marketStatus: "UNKNOWN" }
           ];
           setLiveWatchlist(defaultStocks);
         } else {
@@ -140,7 +146,8 @@ const WatchList = () => {
           setLiveWatchlist((prevWatchlist) =>
             prevWatchlist.map((stock) => {
               const liveStock = liveDataArray.find(
-                (q) => q.name === (stock.symbol || stock.name + ".NS")
+                (q) => q.symbol === (stock.symbol || stock.name + ".NS") ||
+                        q.name === (stock.symbol || stock.name + ".NS")
               );
               if (liveStock) {
                 return {
@@ -148,6 +155,9 @@ const WatchList = () => {
                   price: liveStock.price,
                   nativePrice: liveStock.nativePrice || liveStock.price,
                   currency: liveStock.currency || 'INR',
+                  market: liveStock.market || stock.market || "",
+                  exchange: liveStock.exchange || stock.exchange || "",
+                  marketStatus: liveStock.marketStatus || "UNKNOWN",
                   percent: liveStock.percent,
                   isDown: liveStock.isDown,
                 };
@@ -180,12 +190,15 @@ const WatchList = () => {
       const handlePriceUpdate = (data) => {
         setLiveWatchlist((prevWatchlist) =>
           prevWatchlist.map((stock) => {
-            if ((stock.symbol || stock.name + ".NS") === data.name) {
+            if ((stock.symbol || stock.name + ".NS") === (data.symbol || data.name)) {
               return {
                 ...stock,
                 price: data.price,
                 nativePrice: data.nativePrice || data.price,
                 currency: data.currency || 'INR',
+                market: data.market || stock.market || "",
+                exchange: data.exchange || stock.exchange || "",
+                marketStatus: data.marketStatus || stock.marketStatus || "UNKNOWN",
                 percent: data.percent,
                 isDown: data.isDown,
               };
@@ -243,13 +256,23 @@ const WatchList = () => {
                 }}
               >
                 <div>
-                  <span style={{ fontWeight: 500, color: "#333", display: "block" }}>{result.name}</span>
-                  <span style={{ fontSize: "11px", color: "#888" }}>{result.longName}</span>
+                  <span style={{ fontWeight: 600, color: "#333", display: "block", fontSize: "13px" }}>
+                    {result.name}
+                  </span>
+                  <span style={{ fontSize: "11px", color: "#888" }}>
+                    {result.symbol} · {result.exchange} · {result.market}
+                  </span>
                 </div>
-                <button style={{
-                  background: "#4a90e2", color: "white", border: "none",
-                  borderRadius: "3px", padding: "4px 8px", cursor: "pointer"
-                }}>+</button>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: "11px", color: "#2196F3", fontWeight: 500 }}>
+                    {result.currency}
+                  </span>
+                  <button style={{
+                    background: "#4a90e2", color: "white", border: "none",
+                    borderRadius: "3px", padding: "4px 8px", cursor: "pointer",
+                    marginLeft: "8px"
+                  }}>+</button>
+                </div>
               </li>
             ))}
           </ul>
@@ -299,7 +322,19 @@ const WatchListItem = ({ stock, removeStockFromWatchlist, isActive, onToggle }) 
       onClick={onToggle}
     >
       <div className="item">
-        <p className={stock.isDown ? "down" : "up"}>{stock.name}</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <p className={stock.isDown ? "down" : "up"} style={{ margin: 0 }}>{stock.name}</p>
+          {stock.exchange && (
+            <span style={{ fontSize: "10px", color: "#999", display: "flex", alignItems: "center", gap: "4px" }}>
+              {stock.exchange}
+              {stock.marketStatus === "OPEN" ? (
+                <span style={{ color: "#4CAF50", fontWeight: 600 }}>● Open</span>
+              ) : stock.marketStatus === "CLOSED" ? (
+                <span style={{ color: "#f44336", fontWeight: 600 }}>● Closed</span>
+              ) : null}
+            </span>
+          )}
+        </div>
 
         <div className="item-info">
           <span className="percent">{stock.percent}</span>

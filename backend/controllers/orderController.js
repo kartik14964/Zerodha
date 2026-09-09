@@ -7,7 +7,7 @@ const { cache } = require("../services/marketDataService");
 
 const placeOrder = async (req, res) => {
   const { name, symbol, qty, mode, idempotencyKey } = req.body;
-  
+
   if (!idempotencyKey) {
     return res.status(400).json({ message: "Idempotency key is required." });
   }
@@ -20,7 +20,7 @@ const placeOrder = async (req, res) => {
 
   const orderQty = Number(qty);
   // Security Fix: Never trust client price. Use authoritative server-side cached INR price.
-  const orderPrice = Number(cachedStock.price); 
+  const orderPrice = Number(cachedStock.price);
   const totalTransactionValue = orderQty * orderPrice;
   const userId = req.user._id;
 
@@ -28,7 +28,7 @@ const placeOrder = async (req, res) => {
   const existingOrderCheck = await OrdersModel.findOne({ user: userId, idempotencyKey });
   if (existingOrderCheck) {
     if (existingOrderCheck.name !== name || existingOrderCheck.qty !== orderQty || existingOrderCheck.mode !== mode) {
-       return res.status(409).json({ message: "Conflict: Same idempotency key used with different parameters." });
+      return res.status(409).json({ message: "Conflict: Same idempotency key used with different parameters." });
     }
     return res.status(200).json({ message: "Order processed successfully (Idempotent response)" });
   }
@@ -40,10 +40,10 @@ const placeOrder = async (req, res) => {
     await session.withTransaction(async () => {
       const user = await UserModel.findById(userId).session(session);
       if (!user) {
-         console.log("USER IS NULL. userId:", userId);
-         throw new Error("USER_NOT_FOUND");
+        console.log("USER IS NULL. userId:", userId);
+        throw new Error("USER_NOT_FOUND");
       }
-      
+
       // BUY LOGIC
       if (mode === "BUY") {
         if (user.balance < totalTransactionValue) {
@@ -52,7 +52,7 @@ const placeOrder = async (req, res) => {
 
         user.balance -= totalTransactionValue;
         await user.save({ session });
-        
+
         const existingHolding = await HoldingsModel.findOne({ name, user: userId }).session(session);
 
         if (existingHolding) {
@@ -74,10 +74,10 @@ const placeOrder = async (req, res) => {
             day: "0%",
           }).save({ session });
         }
-        
+
         const existingPos = await PositionsModel.findOne({ name, user: userId }).session(session);
         if (existingPos) {
-          existingPos.qty += orderQty; 
+          existingPos.qty += orderQty;
           await existingPos.save({ session });
         } else {
           await new PositionsModel({
@@ -106,13 +106,13 @@ const placeOrder = async (req, res) => {
         await user.save({ session });
 
         if (existingHolding.qty === orderQty) {
-          await HoldingsModel.deleteOne({ name, user: userId }).session(session); 
+          await HoldingsModel.deleteOne({ name, user: userId }).session(session);
         } else {
           existingHolding.qty -= orderQty;
           existingHolding.price = orderPrice;
           await existingHolding.save({ session });
         }
-        
+
         const existingPos = await PositionsModel.findOne({ name, user: userId }).session(session);
         if (existingPos) {
           if (existingPos.qty <= orderQty) {
@@ -126,7 +126,7 @@ const placeOrder = async (req, res) => {
 
       // SAVE ORDER
       await new OrdersModel({
-        user: userId, 
+        user: userId,
         name,
         qty: orderQty,
         price: orderPrice,
@@ -147,7 +147,7 @@ const placeOrder = async (req, res) => {
         return res.status(200).json({ message: "Order processed successfully (Idempotent response)" });
       }
     }
-    
+
     // Handle business logic throw strings
     if (err.message === "INSUFFICIENT_FUNDS") {
       return res.status(400).json({ message: `Insufficient funds.` });

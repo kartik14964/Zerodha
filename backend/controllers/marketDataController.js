@@ -8,10 +8,10 @@ const getQuotes = async (req, res) => {
     const symbols = req.query.symbols;
     if (!symbols) return res.status(400).json({ error: "Missing symbols query parameter" });
     const symbolArray = symbols.split(",");
-    
+
     // Fetch multi-currency aware quotes from the central service
     const formatted = await getInitialQuotes(symbolArray);
-    
+
     res.json(formatted);
   } catch (err) {
     console.error("Error fetching quotes:", err);
@@ -23,10 +23,10 @@ const searchQuotes = async (req, res) => {
   try {
     const query = req.query.q;
     if (!query) return res.status(400).json({ error: "Missing query parameter" });
-    
+
     // Search Yahoo Finance
     const result = await yahooFinance.search(query);
-    
+
     // Filter out irrelevant results, keep equities, ETFs, crypto, and indices
     const formatted = result.quotes
       .filter(q => ["EQUITY", "ETF", "CRYPTOCURRENCY", "INDEX"].includes(q.quoteType))
@@ -36,7 +36,7 @@ const searchQuotes = async (req, res) => {
         longName: q.longname || q.shortname || q.symbol,
         exchange: q.exchange
       }));
-      
+
     res.json(formatted);
   } catch (err) {
     console.error("Error searching quotes:", err);

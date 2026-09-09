@@ -1,9 +1,8 @@
 const YahooFinance = require("yahoo-finance2").default;
+const { normalizeYahooExchange } = require("../config/yahooExchanges");
+const { getMarketStatus } = require("./marketStatusService");
 
 // Configure yahoo-finance2 with a realistic browser User-Agent.
-// When deployed on cloud platforms like Render, Yahoo Finance blocks requests
-// that look like automated server traffic (returning 429). A browser User-Agent
-// significantly reduces the chance of being flagged and rate-limited.
 const yahooFinance = new YahooFinance({
   suppressNotices: ["yahooSurvey"],
   fetchOptions: {
@@ -21,48 +20,14 @@ const symbolCounts = new Map();
 // The last known good price state (In-Memory Cache)
 const cache = new Map();
 
-// Exchange rate mapping (starts with a safe fallback, updated every poll)
-let USD_TO_INR_RATE = 84.0;
-
 let ioRef = null;
-
-// ---------------------------------------------------------------------------
-// warmupReady — gates ALL Yahoo Finance calls until the crumb is acquired.
-// Without this, fetchAndBroadcast (every 5s) and getInitialQuotes (per user)
-// all fire simultaneously on startup, causing a burst that triggers 429.
-// Only ONE crumb request (the warmup) goes to Yahoo; everything else waits.
-// ---------------------------------------------------------------------------
-let warmupReady = false;
-
-const warmupYahooFinance = async (attempt = 1) => {
-  try {
-    await yahooFinance.quote("INR=X");
-    warmupReady = true;
-    console.log("✅ Yahoo Finance warmed up successfully.");
-  } catch (err) {
-    if (attempt <= 8) {
-      const delay = Math.min(5000 * attempt, 30000);
-      console.warn(
-        `⚠️  Yahoo Finance warmup failed (attempt ${attempt}/8), retrying in ${delay / 1000}s — ${err.message}`
-      );
-      setTimeout(() => warmupYahooFinance(attempt + 1), delay);
-    } else {
-      // Give up gating — let requests through and hope the crumb resolves
-      warmupReady = true;
-      console.error(
-        "❌ Yahoo Finance warmup failed after 8 attempts. Proceeding anyway."
-      );
-    }
-  }
-};
+let isFetching = false;
+let cooldownUntil = 0;
 
 const initMarketDataService = (io) => {
   ioRef = io;
-  warmupReady = false;
-  // Kick off warmup — all other Yahoo calls wait until this succeeds
-  warmupYahooFinance();
-  // Poll every 5s — gated by warmupReady so no burst on startup
-  setInterval(fetchAndBroadcast, 5000);
+  // Poll Yahoo Finance every 30 seconds (reduced from 5s to protect against 429s)
+  setInterval(fetchAndBroadcast, 30000);
 };
 
 // ---------------------------------------------------------------------------
@@ -88,55 +53,71 @@ const removeSymbols = (symbols) => {
 };
 
 // ---------------------------------------------------------------------------
-// Helper: fetch a batch of symbols using quote() and update cache + FX rate.
+// Helper: fetch a batch of symbols and update the in-memory cache.
+// Prices are stored in NATIVE currency (no forced INR conversion).
+// Market status is computed locally per exchange — no extra Yahoo request needed.
 // ---------------------------------------------------------------------------
 const fetchBatch = async (symbolsToFetch) => {
-  const batch = symbolsToFetch.includes("INR=X")
-    ? symbolsToFetch
-    : [...symbolsToFetch, "INR=X"];
+  if (symbolsToFetch.length === 0) return [];
 
-  const quotes = await yahooFinance.quote(batch);
-  const results = Array.isArray(quotes) ? quotes : [quotes];
-
-  // Update FX rate
-  const fxQuote = results.find((q) => q.symbol === "INR=X");
-  if (fxQuote && fxQuote.regularMarketPrice) {
-    USD_TO_INR_RATE = fxQuote.regularMarketPrice;
+  // Cooldown check: if Yahoo returned 429, serve from cache
+  if (Date.now() < cooldownUntil) {
+    console.log("Yahoo Finance in cooldown. Serving from cache.");
+    return symbolsToFetch.map(s => cache.get(s)).filter(Boolean);
   }
 
-  const formatted = [];
-  results.forEach((q) => {
-    if (q.symbol === "INR=X") return;
-    if (!q.regularMarketPrice) return;
+  // Deduplicate
+  const uniqueSymbols = [...new Set(symbolsToFetch)];
 
-    let finalPrice = q.regularMarketPrice;
-    if (q.currency === "USD") {
-      finalPrice = finalPrice * USD_TO_INR_RATE;
+  try {
+    const quotes = await yahooFinance.quote(uniqueSymbols);
+    const results = Array.isArray(quotes) ? quotes : [quotes];
+
+    const formatted = [];
+    results.forEach((q) => {
+      if (!q.regularMarketPrice) return;
+
+      // Determine exchange and market from Yahoo's exchange code
+      const exchangeMapping = normalizeYahooExchange(q.exchange);
+      const exchange = exchangeMapping ? exchangeMapping.exchange : (q.exchange || "UNKNOWN");
+      const market = exchangeMapping ? exchangeMapping.market.name : "UNKNOWN";
+
+      // Compute market open/closed status locally (no Yahoo API call)
+      const statusInfo = getMarketStatus(exchange);
+
+      const entry = {
+        symbol: q.symbol,
+        name: q.symbol,         // Keep 'name' for backward compat with old watchlist code
+        price: q.regularMarketPrice,  // NATIVE currency price (USD stays USD, INR stays INR)
+        nativePrice: q.regularMarketPrice,
+        currency: q.currency || "INR",
+        market: market,
+        exchange: exchange,
+        marketStatus: statusInfo.status, // "OPEN" | "CLOSED"
+        percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
+        isDown: (q.regularMarketChangePercent || 0) < 0,
+      };
+
+      cache.set(q.symbol, entry);
+      formatted.push(entry);
+    });
+
+    return formatted;
+  } catch (err) {
+    if (err.message && err.message.includes("429")) {
+      console.warn("Yahoo Finance 429 Rate Limit hit. Entering 5-minute cooldown.");
+      cooldownUntil = Date.now() + 5 * 60 * 1000;
     }
-
-    const entry = {
-      name: q.symbol,
-      price: finalPrice,
-      nativePrice: q.regularMarketPrice,
-      currency: q.currency || "INR",
-      percent: (q.regularMarketChangePercent || 0).toFixed(2) + "%",
-      isDown: (q.regularMarketChangePercent || 0) < 0,
-    };
-
-    cache.set(q.symbol, entry);
-    formatted.push(entry);
-  });
-
-  return formatted;
+    throw err;
+  }
 };
 
 // ---------------------------------------------------------------------------
-// Polling loop — broadcast live prices to subscribed WebSocket clients.
-// Skips entirely until warmup is done to avoid startup burst.
+// Polling loop — broadcast live prices to subscribed WebSocket clients
 // ---------------------------------------------------------------------------
 const fetchAndBroadcast = async () => {
-  if (!warmupReady) return; // wait for crumb to be ready
-  if (symbolCounts.size === 0) return;
+  if (symbolCounts.size === 0 || isFetching) return;
+  isFetching = true;
 
   const symbolsToFetch = Array.from(symbolCounts.keys());
 
@@ -144,38 +125,37 @@ const fetchAndBroadcast = async () => {
     const results = await fetchBatch(symbolsToFetch);
     results.forEach((entry) => {
       if (ioRef) {
-        ioRef.to(`stock:${entry.name}`).emit("price_update", entry);
+        // Emit on both symbol and name channels for backward compat
+        ioRef.to(`stock:${entry.symbol}`).emit("price_update", entry);
       }
     });
   } catch (err) {
     console.error("Market Data Fetch Error (cache retained):", err.message);
+  } finally {
+    isFetching = false;
   }
 };
 
 // ---------------------------------------------------------------------------
-// Initial quote fetch — called when a client connects and needs current prices.
-// Returns [] if warmup hasn't finished yet (frontend will retry).
+// Initial quote fetch — called when a client connects and needs current prices
 // ---------------------------------------------------------------------------
 const getInitialQuotes = async (symbols) => {
   if (!symbols || symbols.length === 0) return [];
+  const unique = [...new Set(symbols)];
+  const missing = unique.filter((s) => !cache.has(s));
 
-  // Return empty if warmup isn't done — frontend retry logic will re-request
-  if (!warmupReady) {
-    console.log("Warmup not ready yet, returning [] for frontend retry.");
-    return [];
-  }
-
-  const missing = symbols.filter((s) => !cache.has(s));
-
-  if (missing.length > 0) {
+  if (missing.length > 0 && !isFetching) {
+    isFetching = true;
     try {
       await fetchBatch(missing);
     } catch (err) {
       console.error("Error fetching initial quotes:", err.message);
+    } finally {
+      isFetching = false;
     }
   }
 
-  return symbols.map((s) => cache.get(s)).filter(Boolean);
+  return unique.map((s) => cache.get(s)).filter(Boolean);
 };
 
 module.exports = {
